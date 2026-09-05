@@ -46,8 +46,27 @@ export function validateClip(c: Clip, rig: Rig): string[] {
       if (kf.ease !== undefined && !(kf.ease in EASES)) errors.push(`${kat}: unknown ease "${kf.ease}"`);
       errors.push(...valueErrors(tr.property, kf.v, rig).map((e) => `${kat}: ${e}`));
     }
+    if (c.loop && tr.keys.length > 1) {
+      const first = tr.keys[0].v;
+      const last = tr.keys[tr.keys.length - 1].v;
+      if (!loopsCleanly(tr.property, first, last)) {
+        errors.push(`${at}: looping clip must end where it starts (first key ${JSON.stringify(first)}, last key ${JSON.stringify(last)})`);
+      }
+    }
   }
   return errors;
+}
+
+/** A looping clip's last key must land back on its first, so the seam is invisible. */
+function loopsCleanly(property: Property, first: unknown, last: unknown): boolean {
+  if (property === 'position' || property === 'scale') {
+    return isVec2(first) && isVec2(last) && first[0] === last[0] && first[1] === last[1];
+  }
+  if (property === 'rotation') {
+    if (typeof first !== 'number' || typeof last !== 'number') return false;
+    return (((last - first) % 360) + 360) % 360 === 0;
+  }
+  return first === last;
 }
 
 function valueErrors(property: Property, v: unknown, rig: Rig): string[] {
@@ -61,7 +80,9 @@ function valueErrors(property: Property, v: unknown, rig: Rig): string[] {
       return typeof v === 'number' && v >= 0 && v <= 1 ? [] : ['opacity must be a number in 0..1'];
     case 'shape':
       return typeof v === 'string' && (v === 'default' || v in rig.expressions) ? [] : [`unknown expression "${String(v)}"`];
-    default:
-      return [`unknown property ${String(property)}`];
+    default: {
+      const never: never = property;
+      return [`unknown property ${String(never)}`];
+    }
   }
 }
