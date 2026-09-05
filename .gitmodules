@@ -1,0 +1,3 @@
+[submodule "vendor/visual-identity"]
+	path = vendor/visual-identity
+	url = https://github.com/hackers-pub/visual-identity

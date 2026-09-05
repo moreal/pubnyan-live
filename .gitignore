@@ -1,0 +1,7 @@
+node_modules/
+data/
+dist/verify/
+rig/preview/*.png
+rig/inspect/
+.env
+.superpowers/
