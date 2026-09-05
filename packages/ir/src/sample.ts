@@ -100,3 +100,13 @@ export function sampleClip(rig: Rig, clip: Clip, time: number): SampledPart[] {
   }
   return out;
 }
+
+/** Every visible part of an expression at rest: identity transforms, full opacity. */
+export function staticParts(rig: Rig, expression: string): SampledPart[] {
+  const out: SampledPart[] = [];
+  for (const part of rig.parts) {
+    const d = resolvePath(rig, part, expression);
+    if (d) out.push({ name: part.name, fill: part.fill, d, opacity: 1, matrix: IDENTITY });
+  }
+  return out;
+}

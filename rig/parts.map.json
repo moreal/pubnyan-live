@@ -1,0 +1,88 @@
+{
+  "source": "vendor/visual-identity/exports",
+  "rigs": {
+    "pubnyan": {
+      "artboard": { "width": 374, "height": 319 },
+      "default": "normal",
+      "align": { "part": "nose" },
+      "parts": [
+        { "name": "body", "fill": "#000000", "pivot": [187, 314] },
+        { "name": "face", "fill": "#ffffff", "parent": "body" },
+        { "name": "eye-l.white", "fill": "#ffffff", "parent": "body" },
+        { "name": "eye-r.white", "fill": "#ffffff", "parent": "body" },
+        { "name": "ring-gap-l", "fill": "#ffffff", "parent": "body" },
+        { "name": "ring-gap-r", "fill": "#ffffff", "parent": "body" },
+        { "name": "tear-l", "fill": "#ffffff", "parent": "body" },
+        { "name": "tear-r", "fill": "#ffffff", "parent": "body" },
+        { "name": "eye-l.pupil", "fill": "#000000", "parent": "body" },
+        { "name": "eye-r.pupil", "fill": "#000000", "parent": "body" },
+        { "name": "nose", "fill": "#000000", "parent": "body" },
+        { "name": "mouth", "fill": "#000000", "parent": "body" }
+      ],
+      "expressions": {
+        "normal": {
+          "file": "pubnyan-normal-transparent.svg",
+          "map": {
+            "body": "path17#outer", "face": "path7#outer",
+            "eye-l.white": "path11#outer", "eye-r.white": "path9#outer",
+            "ring-gap-l": "path15", "ring-gap-r": "path13",
+            "eye-l.pupil": "path21", "eye-r.pupil": "path19",
+            "nose": "path23", "mouth": "path25"
+          }
+        },
+        "angry": {
+          "file": "pubnyan-angry-transparent.svg",
+          "map": {
+            "body": "path55#outer", "face": "path45#outer",
+            "eye-l.white": "path47#outer", "eye-r.white": "path43#outer",
+            "ring-gap-l": "path53", "ring-gap-r": "path51",
+            "nose": "path49", "mouth": "path57"
+          }
+        },
+        "curious": {
+          "file": "pubnyan-curious-transparent.svg",
+          "map": {
+            "body": "path37#outer", "face": "path31#outer",
+            "eye-l.white": "path27#outer", "eye-r.white": "path29#outer",
+            "ring-gap-l": "path35", "ring-gap-r": "path33",
+            "nose": "path39", "mouth": "path41"
+          }
+        },
+        "cry": {
+          "file": "pubnyan-cry-transparent.svg",
+          "map": {
+            "body": "path81#outer", "face": "path63#outer",
+            "eye-l.white": "path59#outer", "eye-r.white": "path65#outer",
+            "ring-gap-l": "path79", "ring-gap-r": "path77",
+            "tear-l": "path61", "tear-r": "path67",
+            "eye-l.pupil": "path69", "eye-r.pupil": "path71",
+            "nose": "path73", "mouth": "path75"
+          }
+        },
+        "shy": {
+          "file": "pubnyan-shy-transparent.svg",
+          "map": {
+            "body": "path103#outer", "face": "path87#outer",
+            "eye-l.white": "path85#outer", "eye-r.white": "path83#outer",
+            "ring-gap-l": "path97", "ring-gap-r": "path95",
+            "nose": "path89", "mouth": "path111"
+          }
+        }
+      }
+    },
+    "starorbit": {
+      "artboard": { "width": 288, "height": 203 },
+      "default": "rest",
+      "parts": [
+        { "name": "ring", "fill": "#000000" },
+        { "name": "star", "fill": "#000000" }
+      ],
+      "expressions": {
+        "rest": {
+          "file": "starorbit-transparent-287x202.svg",
+          "map": { "ring": "path834", "star": "path836" }
+        }
+      }
+    }
+  }
+}
