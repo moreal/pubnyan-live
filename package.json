@@ -1,0 +1,48 @@
+{
+  "name": "pubnyan-live",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=26"
+  },
+  "imports": {
+    "#ir/*": "./packages/ir/src/*",
+    "#rig-extract/*": "./packages/rig-extract/src/*",
+    "#export-svg/*": "./packages/export-svg/src/*",
+    "#verify/*": "./packages/verify/src/*",
+    "#motion/*": "./motion/*",
+    "#rig/*": "./rig/*"
+  },
+  "scripts": {
+    "test": "vitest run --passWithNoTests",
+    "check:types": "tsc --noEmit",
+    "rig:extract": "node packages/rig-extract/src/cli.ts extract",
+    "rig:inspect": "node packages/rig-extract/src/cli.ts inspect",
+    "export:svg": "node packages/export-svg/src/cli.ts",
+    "verify": "node packages/verify/src/cli.ts"
+  },
+  "dependencies": {
+    "@flue/runtime": "^2.0.3",
+    "@xmldom/xmldom": "^0.9.12",
+    "pixelmatch": "^7.2.0",
+    "pngjs": "^7.0.0",
+    "puppeteer": "^25.10.0",
+    "svg-path-bbox": "^2.1.0",
+    "svgpath": "^2.6.0"
+  },
+  "devDependencies": {
+    "@flue/cli": "^2.0.3",
+    "@types/node": "^26.4.1",
+    "@types/pngjs": "^6.0.5",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.0"
+  },
+  "allowScripts": {
+    "@google/genai@1.52.0": true,
+    "core-js-pure@3.50.0": true,
+    "esbuild@0.28.2": true,
+    "protobufjs@7.6.6": true,
+    "puppeteer@25.10.0": true,
+    "fsevents@2.3.3": true
+  }
+}
