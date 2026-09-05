@@ -25,14 +25,15 @@ export const readBacklog = defineTool({
 
 export const markDoneTool = defineTool({
   name: 'mark_done',
-  description: 'Check off the open backlog item at the given 1-based line of docs/backlog.md. Call only after the reviewer passed the item.',
+  description: 'Check off the open backlog item at the given 1-based line of docs/backlog.md. Call after the reviewer passed the item. Idempotent and safe to call again (for example after a later git_commit refusal): calling it on a line that is already checked is a no-op.',
   input: v.object({ line: v.pipe(v.number(), v.integer(), v.minValue(1)) }),
   harness: true,
   async run({ data, harness }) {
     const md = await harness.sandbox.readFile(BACKLOG_PATH);
     const item = firstOpenItem(md);
     const next = markDone(md, data.line);
-    await harness.sandbox.writeFile(BACKLOG_PATH, next);
-    return { output: { ok: true, title: item?.line === data.line ? item.title : `line ${data.line}` } };
+    const alreadyDone = next === md;
+    if (!alreadyDone) await harness.sandbox.writeFile(BACKLOG_PATH, next);
+    return { output: { ok: true, title: item?.line === data.line ? item.title : `line ${data.line}`, alreadyDone } };
   },
 });
