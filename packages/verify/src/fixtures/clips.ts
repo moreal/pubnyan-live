@@ -20,4 +20,9 @@ export const fixtureClips: Clip[] = [
   clip('fixture-opacity', { rig: 'pubnyan', duration: 1 }, [
     track('body', 'opacity', [key(0, 1), key(0.5, 0.2), key(1, 1)]),
   ]),
+  // mouth normal -> angry -> normal: a round trip through an incompatible (crossfading) shape,
+  // exercising a target that turns each expression into its own layer/element both ways.
+  clip('fixture-crossfade-roundtrip', { rig: 'pubnyan', duration: 1, loop: false }, [
+    track('mouth', 'shape', [key(0, 'normal'), key(0.5, 'angry', 'easeInOut'), key(1, 'normal', 'easeInOut')]),
+  ]),
 ];
