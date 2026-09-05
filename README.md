@@ -22,7 +22,7 @@ npm run verify          # export every target, check parity against the referenc
 npm test
 npm run check:types
 npm run check          # type check + tests + verify
-npm run agent -- 1     # let the Flue director complete one backlog item (needs ANTHROPIC_API_KEY in .env)
+npm run agent -- 1     # let the Flue director complete one backlog item (needs ANTHROPIC_API_KEY in .env, or a pi login: `pi` then /login; mints a Claude subscription OAuth token via `pi auth print-bearer-token`, billed as extra usage per pi's docs)
 ```
 
 ## Output notes
