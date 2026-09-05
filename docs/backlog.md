@@ -23,12 +23,12 @@ Work queue shared by humans and agents. Top item first. Mark `[x]` in the commit
 
 - [ ] **export-video.** `packages/export-video`: render each clip through the svg target at `clip.fps` to PNG frames in a temp dir, then `ffmpeg` to `dist/video/<clip>.mp4` (h264, yuv420p), `.webp` (animated), `.gif` (palette pass). Not a parity target; the verify CLI just runs it.
 
-## Phase 6 (done): agent loop
+## Phase 7 (done): agent loop
 
-- [x] **Flue agents.** `src/agents/director.ts`, `src/agents/animator.ts`, `src/agents/reviewer.ts`, tools in `src/tools/` (`read_backlog`, `mark_done`, `run_verify` calling `npm run verify` via `harness.sandbox`, `git_commit`), skills in `src/skills/{rig-reference,clip-dsl,pubnyan-motion}/SKILL.md`. API: `'use agent'` modules; `useModel('anthropic/claude-opus-5')` for the director; `useSubagent(defineSubagent({ name, description, agent: Animator, model: 'anthropic/claude-sonnet-5' }))`; `useSandbox(local(), { cwd: <repo root> })` from `@flue/runtime/node`; `useSkill(skill)` with `import skill from '../skills/clip-dsl/SKILL.md'`; `defineTool({ name, description, input: v.object(...), harness: true, async run({ data, harness }) { ... } })` with valibot. `usePersistentState('currentItem', null)` keeps the item across turns. Acceptance: `npx flue run src/agents/director.ts -m next --id pubnyan` completes one backlog item end to end on a throwaway item ("add a 1 s `wink` clip").
-- [x] **Agent loop scripts.** `npm run agent` loops `flue run ... -m next` until the director replies `BACKLOG EMPTY`; `.github/workflows/agent.yml` runs it on a schedule with `ANTHROPIC_API_KEY` from secrets and opens a PR from the `agent/*` branch.
+- [x] **Flue agents.** `src/agents/director.ts` (opus; delegates through `defineSubagent`, commits, marks items done) with the sonnet delegates `src/agents/implementer.ts` and `src/agents/reviewer.ts`; tools in `src/tools/`: `read_backlog`, `mark_done`, `run_checks` (`npm run check` through `harness.sandbox`), `git_commit` (runs the checks, then commits on `agent/backlog`); skills in `src/skills/{rig-reference,clip-dsl,pubnyan-motion,exporter-package}/SKILL.md`. `npx flue run src/agents/director.ts -m next --id pubnyan` completes one backlog item end to end.
+- [x] **Agent loop scripts.** `scripts/agent-loop.mjs` (`npm run agent -- <max>`) runs the director once per item until it replies `BACKLOG EMPTY`, an item fails, or `max` items are done; it refuses to start on a dirty tree, time-boxes each run, and resolves credentials from `.env` or a pi subscription OAuth token (`src/tools/anthropic-auth.ts`). `.github/workflows/agent.yml` runs it on demand and opens a PR from `agent/backlog`.
 
-## Animation work (for the agents, after phase 6)
+## Animation work (for the agents)
 
 - [ ] **Expression transitions.** Clips `to-angry`, `to-curious`, `to-cry`, `to-shy` (0.4 s, non-loop) morphing/crossfading eyes, mouth, face, tears from `normal`, and the reverse clips. Wire them into `motion/machine.ts`'s expression layer.
 - [ ] **Reactions.** One-shot clips `nod` (body position y dip, 0.6 s), `tilt` (body rotation ±6°, 0.8 s), `ear-twitch` (not possible on the fused silhouette: instead a quick body scale-x squash, 0.3 s), `tail-flick` (ring-gap-r quick scale, 0.4 s). Wire into the reaction layer.
@@ -36,7 +36,7 @@ Work queue shared by humans and agents. Top item first. Mark `[x]` in the commit
 
 ## Maintenance
 
-Deferred cleanups found in the foundation review. None blocks a phase; take them when touching the area.
+Deferred cleanups found in the foundation and agent-loop reviews. None blocks a phase; take them when touching the area.
 
 - [ ] **svgTarget renders the exported file.** `svgTarget.renderFrame` re-runs `exportSvg` in memory, so parity never tests the bytes in `dist/svg`. Load the written file instead.
 - [ ] **Move `Renderer` out of `packages/verify`.** `rig-extract` imports the test harness to render previews. Put `Renderer` in a shared package both can depend on.
@@ -47,3 +47,5 @@ Deferred cleanups found in the foundation review. None blocks a phase; take them
 - [ ] **Selector suffix errors conflate two failures.** `id#foo` reports "subpath index out of range"; distinguish "not a number" from "out of range".
 - [ ] **Typed loader for JSON rigs.** Replace the `as unknown as Rig` casts in `motion/index.ts` with a loader that validates and narrows.
 - [ ] **Repository LICENSE.** Decide the licence for the code and add the file; the artwork stays CC BY-SA 4.0 under its own attribution.
+- [ ] **`git_commit` re-runs the suite the reviewer just ran.** Every item pays for `npm run check` twice. Cache it by tree: `run_checks` writes the `git write-tree` hash it verified, and `git_commit` skips its own run while the tree still hashes the same.
+- [ ] **Exercise `.github/workflows/agent.yml`.** It has never run against a remote. Once one exists, dispatch it with max 1, then decide between `peter-evans/create-pull-request` and a plain `git push` + `gh pr create` (the loop already commits on `agent/backlog`, so the action mostly duplicates it).
