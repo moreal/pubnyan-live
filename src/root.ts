@@ -1,2 +1,4 @@
+import { fileURLToPath } from 'node:url';
+
 /** Absolute repository root, independent of the process working directory. */
-export const REPO_ROOT = new URL('../', import.meta.url).pathname;
+export const REPO_ROOT = fileURLToPath(new URL('../', import.meta.url));
