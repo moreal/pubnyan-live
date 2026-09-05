@@ -19,11 +19,14 @@ Work queue shared by humans and agents. Top item first. Mark `[x]` in the commit
 - [ ] **export-rive: shape keyframes.** Morphs via keyed vertex properties; crossfade via opacity on per-expression shapes.
 - [ ] **export-rive: state machine.** StateMachine with StateMachineNumber/Bool/Trigger inputs, one StateMachineLayer per machine layer, AnimationState per state, StateTransition with TransitionNumberCondition / TransitionBoolCondition / TransitionTriggerCondition, EntryState wired. Load in the runtime and assert `stateMachineInputs()` names match `motion/machine.ts`.
 
-## Phase 6: Video and the agent loop
+## Phase 6: Video
 
 - [ ] **export-video.** `packages/export-video`: render each clip through the svg target at `clip.fps` to PNG frames in a temp dir, then `ffmpeg` to `dist/video/<clip>.mp4` (h264, yuv420p), `.webp` (animated), `.gif` (palette pass). Not a parity target; the verify CLI just runs it.
-- [ ] **Flue agents.** `src/agents/director.ts`, `src/agents/animator.ts`, `src/agents/reviewer.ts`, tools in `src/tools/` (`read_backlog`, `mark_done`, `run_verify` calling `npm run verify` via `harness.sandbox`, `git_commit`), skills in `src/skills/{rig-reference,clip-dsl,pubnyan-motion}/SKILL.md`. API: `'use agent'` modules; `useModel('anthropic/claude-opus-5')` for the director; `useSubagent(defineSubagent({ name, description, agent: Animator, model: 'anthropic/claude-sonnet-5' }))`; `useSandbox(local(), { cwd: <repo root> })` from `@flue/runtime/node`; `useSkill(skill)` with `import skill from '../skills/clip-dsl/SKILL.md'`; `defineTool({ name, description, input: v.object(...), harness: true, async run({ data, harness }) { ... } })` with valibot. `usePersistentState('currentItem', null)` keeps the item across turns. Acceptance: `npx flue run src/agents/director.ts -m next --id pubnyan` completes one backlog item end to end on a throwaway item ("add a 1 s `wink` clip").
-- [ ] **Agent loop scripts.** `npm run agent` loops `flue run ... -m next` until the director replies `BACKLOG EMPTY`; `.github/workflows/agent.yml` runs it on a schedule with `ANTHROPIC_API_KEY` from secrets and opens a PR from the `agent/*` branch.
+
+## Phase 6 (done): agent loop
+
+- [x] **Flue agents.** `src/agents/director.ts`, `src/agents/animator.ts`, `src/agents/reviewer.ts`, tools in `src/tools/` (`read_backlog`, `mark_done`, `run_verify` calling `npm run verify` via `harness.sandbox`, `git_commit`), skills in `src/skills/{rig-reference,clip-dsl,pubnyan-motion}/SKILL.md`. API: `'use agent'` modules; `useModel('anthropic/claude-opus-5')` for the director; `useSubagent(defineSubagent({ name, description, agent: Animator, model: 'anthropic/claude-sonnet-5' }))`; `useSandbox(local(), { cwd: <repo root> })` from `@flue/runtime/node`; `useSkill(skill)` with `import skill from '../skills/clip-dsl/SKILL.md'`; `defineTool({ name, description, input: v.object(...), harness: true, async run({ data, harness }) { ... } })` with valibot. `usePersistentState('currentItem', null)` keeps the item across turns. Acceptance: `npx flue run src/agents/director.ts -m next --id pubnyan` completes one backlog item end to end on a throwaway item ("add a 1 s `wink` clip").
+- [x] **Agent loop scripts.** `npm run agent` loops `flue run ... -m next` until the director replies `BACKLOG EMPTY`; `.github/workflows/agent.yml` runs it on a schedule with `ANTHROPIC_API_KEY` from secrets and opens a PR from the `agent/*` branch.
 
 ## Animation work (for the agents, after phase 6)
 

@@ -1,0 +1,32 @@
+# .github/workflows/agent.yml
+name: agent
+on:
+  workflow_dispatch:
+    inputs:
+      max:
+        description: Maximum backlog items to complete
+        default: "1"
+  # schedule:
+  #   - cron: "0 3 * * *"   # enable once the loop has proven itself
+jobs:
+  backlog:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: true, fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 26 }
+      - run: npm ci
+      - run: git config user.name "pubnyan-agent" && git config user.email "agent@users.noreply.github.com"
+      - run: npm run agent -- ${{ inputs.max || '1' }}
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      - uses: peter-evans/create-pull-request@v7
+        with:
+          branch: agent/backlog
+          title: "agent: backlog items"
+          body: "Completed by the Flue director loop. Review dist/verify contact sheets locally with `npm run verify`."
+          base: main
