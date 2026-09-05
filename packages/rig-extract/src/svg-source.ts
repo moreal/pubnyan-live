@@ -51,12 +51,44 @@ function readFill(el: Element): string {
   return fill.toLowerCase();
 }
 
-/** Splits absolute path data on M, closes each subpath, drops zero-area artifacts. */
+/** Splits absolute path data on M, closes each subpath, drops zero-area artifacts. Converts H/V to L (rig paths use only M/L/C/Z). */
 export function splitSubpaths(d: string): SourceSubpath[] {
   const groups: string[][] = [];
+  let cx = 0;
+  let cy = 0;
+  let startX = 0;
+  let startY = 0;
   svgpath(d).iterate((seg) => {
-    const text = seg[0] + (seg as unknown as (string | number)[]).slice(1).join(' ');
-    if (seg[0] === 'M') groups.push([]);
+    const args = (seg as unknown as (string | number)[]).slice(1) as number[];
+    let cmd = seg[0];
+    let text: string;
+    if (cmd === 'H') {
+      cx = args[0];
+      text = `L${cx} ${cy}`;
+      cmd = 'L';
+    } else if (cmd === 'V') {
+      cy = args[0];
+      text = `L${cx} ${cy}`;
+      cmd = 'L';
+    } else {
+      text = seg[0] + args.join(' ');
+      if (cmd === 'M') {
+        cx = args[0];
+        cy = args[1];
+        startX = cx;
+        startY = cy;
+      } else if (cmd === 'L') {
+        cx = args[0];
+        cy = args[1];
+      } else if (cmd === 'C') {
+        cx = args[4];
+        cy = args[5];
+      } else if (cmd === 'Z' || cmd === 'z') {
+        cx = startX;
+        cy = startY;
+      }
+    }
+    if (cmd === 'M') groups.push([]);
     groups[groups.length - 1].push(text);
   });
   const out: SourceSubpath[] = [];
