@@ -11,6 +11,13 @@ export interface Target {
   export(rig: Rig, clip: Clip, outDir: string): Promise<string[]>;
   /** Render the target's own output at time t (seconds) to a PNG of artboard size. */
   renderFrame(renderer: Renderer, rig: Rig, clip: Clip, t: number): Promise<Buffer>;
+  /**
+   * Declares which sample times this target currently claims to reproduce. Omit to claim every
+   * time. Targets that are only partially implemented (e.g. a static-frame exporter ahead of its
+   * keyframe support) return false for times outside their scope; `checkParity` reports those as
+   * skipped rather than comparing frames and silently passing or failing them.
+   */
+  supportsTime?(clip: Clip, t: number): boolean;
 }
 
 export interface FrameDiff {
@@ -56,16 +63,19 @@ export interface ParityResult {
   target: string;
   clip: string;
   pass: boolean;
-  frames: { t: number; diffPixels: number; ratio: number }[];
+  frames: { t: number; diffPixels: number; ratio: number; skipped: boolean }[];
   worst: { t: number; ratio: number; diff: Buffer };
   referenceFrames: Buffer[];
   targetFrames: Buffer[];
+  /** Sample times excluded from pass/fail because `target.supportsTime` returned false. */
+  skipped: number[];
 }
 
 export async function checkParity(renderer: Renderer, rig: Rig, clip: Clip, target: Target, times = sampleTimes(clip)): Promise<ParityResult> {
   const referenceFrames: Buffer[] = [];
   const targetFrames: Buffer[] = [];
   const frames: ParityResult['frames'] = [];
+  const skipped: number[] = [];
   let worst: ParityResult['worst'] | undefined;
   for (const t of times) {
     const ref = await referenceFrame(renderer, rig, clip, t);
@@ -73,8 +83,17 @@ export async function checkParity(renderer: Renderer, rig: Rig, clip: Clip, targ
     const d = compareFrames(ref, got);
     referenceFrames.push(ref);
     targetFrames.push(got);
-    frames.push({ t, diffPixels: d.diffPixels, ratio: d.ratio });
+    const supported = target.supportsTime ? target.supportsTime(clip, t) : true;
+    frames.push({ t, diffPixels: d.diffPixels, ratio: d.ratio, skipped: !supported });
+    if (!supported) {
+      skipped.push(t);
+      continue;
+    }
     if (!worst || d.ratio > worst.ratio) worst = { t, ratio: d.ratio, diff: d.diff };
   }
-  return { target: target.name, clip: clip.name, pass: worst!.ratio <= PARITY_MAX_RATIO, frames, worst: worst!, referenceFrames, targetFrames };
+  // If every sampled time was skipped there is nothing to assert; that is itself a bug in the
+  // target's `supportsTime` (or the sampler), not a pass, so surface it as a failure.
+  const pass = worst ? worst.ratio <= PARITY_MAX_RATIO : skipped.length === 0;
+  const fallbackWorst = { t: times[0] ?? 0, ratio: 0, diff: targetFrames[0] ?? Buffer.alloc(0) };
+  return { target: target.name, clip: clip.name, pass, frames, worst: worst ?? fallbackWorst, referenceFrames, targetFrames, skipped };
 }
