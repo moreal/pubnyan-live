@@ -42,6 +42,16 @@ describe('exportSvg', () => {
     expect(out).toContain('@keyframes a-o');
   });
 
+  test('opacity applies to the part own shape only, never to its children', () => {
+    const out = exportSvg(rig, clip('c', { rig: 'r', duration: 1 }, [track('a', 'opacity', [key(0, 1), key(1, 0)])]));
+    const open = out.indexOf('animation: a-o');
+    expect(open).toBeGreaterThan(-1);
+    // the group carrying a-o holds only paths, so the next </g> closes it
+    const close = out.indexOf('</g>', open);
+    expect(out.indexOf('<g id="b"')).toBeGreaterThan(close);
+    expect(out).not.toContain('a-o 1s linear infinite, ');
+  });
+
   test('morphs compatible shapes with d keyframes', () => {
     const out = exportSvg(rig, clip('c', { rig: 'r', duration: 1 }, [track('b', 'shape', [key(0, 'normal'), key(1, 'wide', 'easeInOut')])]));
     expect(out).toContain('d: path("M0 0L4 0L4 4Z")');

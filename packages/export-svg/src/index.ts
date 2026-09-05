@@ -65,6 +65,7 @@ function shapeMarkup(rig: Rig, part: RigPart, track: Track<'shape'> | undefined,
   const paths = track.keys.map((k) => resolvePath(rig, part, k.v));
   const morphable = paths.every((d, i) => i === 0 || (d !== null && paths[i - 1] !== null && interpolatePath(paths[i - 1]!, d, 0) !== null));
   if (morphable) {
+    if (!paths[0]) return '';
     rules.push(keyframes(`${id}-s`, keyStops(track.keys, clip.duration, (v) => `d: path("${resolvePath(rig, part, v)}")`)));
     return path(paths[0]!, `animation: ${id}-s ${timing}`);
   }
@@ -96,11 +97,13 @@ export function exportSvg(rig: Rig, clip: Clip): string {
       rules.push(keyframes(`${id}-t`, tStops));
       anims.push(`${id}-t ${timing}`);
     }
+    let shape = shapeMarkup(rig, part, tracks.shape, clip, timing, rules);
+    // The sampler gives a part the opacity of its OWN track; children do not inherit it,
+    // so the opacity animation wraps the part's shapes alone and never the child groups.
     if (tracks.opacity) {
       rules.push(keyframes(`${id}-o`, keyStops(tracks.opacity.keys, clip.duration, (v) => `opacity: ${fmt(v)}`)));
-      anims.push(`${id}-o ${timing}`);
+      shape = `<g style="animation: ${id}-o ${timing}">${shape}</g>`;
     }
-    const shape = shapeMarkup(rig, part, tracks.shape, clip, timing, rules);
     const kids = (children.get(part.name) ?? []).map(render).join('');
     const style = ['transform-box: view-box', 'transform-origin: 0px 0px'];
     if (anims.length) style.push(`animation: ${anims.join(', ')}`);
