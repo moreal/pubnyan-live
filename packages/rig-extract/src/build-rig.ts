@@ -1,5 +1,6 @@
 import { svgPathBbox } from 'svg-path-bbox';
 import svgpath from 'svgpath';
+import { ATTRIBUTION } from '#ir/svg.ts';
 import type { Rig, RigPart, Vec2 } from '#ir/types.ts';
 import { selectPath, type PartsMapRig } from '#rig-extract/parts-map.ts';
 import type { SourcePath } from '#rig-extract/svg-source.ts';
@@ -16,13 +17,15 @@ export function buildRig(name: string, def: PartsMapRig, files: Record<string, S
   for (const [expr, e] of Object.entries(def.expressions)) {
     const paths = files[e.file];
     if (!paths) throw new Error(`expression "${expr}": file "${e.file}" was not loaded`);
-    const map: Record<string, string | null> = {};
-    for (const part of def.parts) {
-      const sel = e.map[part.name];
-      map[part.name] = sel === undefined ? null : selectPath(paths, sel);
-    }
     for (const mapped of Object.keys(e.map)) {
       if (!def.parts.some((p) => p.name === mapped)) throw new Error(`expression "${expr}" maps unknown part "${mapped}"`);
+    }
+    // Only mapped parts get an entry: an absent part inherits its default path, an explicit null hides it.
+    const map: Record<string, string | null> = {};
+    for (const part of def.parts) {
+      if (!(part.name in e.map)) continue;
+      const sel = e.map[part.name];
+      map[part.name] = sel === null ? null : selectPath(paths, sel);
     }
     expressions[expr] = map;
   }
@@ -30,28 +33,31 @@ export function buildRig(name: string, def: PartsMapRig, files: Record<string, S
   if (!base) throw new Error(`default expression "${def.default}" is not defined`);
 
   if (def.align) {
-    const refPath = base[def.align.part];
-    if (!refPath) throw new Error(`align part "${def.align.part}" is hidden in the default expression`);
+    const part = def.align.part;
+    const refPath = base[part];
+    if (refPath === undefined) throw new Error(`default expression "${def.default}" must map the align part "${part}"`);
+    if (refPath === null) throw new Error(`align part "${part}" is hidden in the default expression`);
     const ref = center(refPath);
     for (const [expr, map] of Object.entries(expressions)) {
       if (expr === def.default) continue;
-      const own = map[def.align.part];
-      if (!own) throw new Error(`align part "${def.align.part}" is hidden in expression "${expr}"`);
+      const own = map[part];
+      if (own === undefined) throw new Error(`expression "${expr}" must map the align part "${part}"; inherited paths are not aligned`);
+      if (own === null) throw new Error(`align part "${part}" is hidden in expression "${expr}"`);
       const c = center(own);
       const dx = ref[0] - c[0];
       const dy = ref[1] - c[1];
-      for (const part of Object.keys(map)) {
-        const d = map[part];
-        if (d) map[part] = svgpath(d).translate(dx, dy).round(2).toString();
+      for (const mapped of Object.keys(map)) {
+        const d = map[mapped];
+        if (d) map[mapped] = svgpath(d).translate(dx, dy).round(2).toString();
       }
     }
   }
 
   const parts: RigPart[] = def.parts.map((p) => {
-    const path = base[p.name];
+    const path = base[p.name] ?? null;
     const part: RigPart = { name: p.name, fill: p.fill, pivot: p.pivot ?? (path ? center(path) : [0, 0]), path };
     if (p.parent !== undefined) part.parent = p.parent;
     return part;
   });
-  return { name, artboard: def.artboard, parts, expressions };
+  return { name, artboard: def.artboard, attribution: ATTRIBUTION, parts, expressions };
 }
