@@ -1,5 +1,4 @@
-import { DOMParser } from '@xmldom/xmldom';
-import type { Element, Node } from '@xmldom/xmldom';
+import { DOMParser, type Element, type Node } from '@xmldom/xmldom';
 import { svgPathBbox } from 'svg-path-bbox';
 import svgpath from 'svgpath';
 

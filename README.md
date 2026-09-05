@@ -6,7 +6,7 @@ Animations of pubnyan, the [Hackers' Pub](https://hackers.pub/) mascot, defined 
 
 - `vendor/visual-identity/` — the source artwork (git submodule).
 - `rig/` — `parts.map.json` names the artwork's paths; `*.rig.json` is generated from it by `npm run rig:extract`.
-- `motion/` — the single definition: `clips/*.clip.ts` and `machine.ts`.
+- `motion/` — the single definition: `clips/*.clip.ts` (plus `machine.ts`, planned; see `docs/backlog.md`).
 - `packages/` — `ir` (types, validation, sampling), `rig-extract`, `export-*`, `verify`.
 - `dist/` — exported output per target.
 - `docs/backlog.md` — the work queue shared by humans and agents.
@@ -22,6 +22,14 @@ npm run verify          # export every target, check parity against the referenc
 npm test
 npm run check:types
 ```
+
+## Output notes
+
+The `dist/svg` files morph shapes with CSS `d: path()`, which needs a browser that supports it (Chromium, Firefox 97+). Shapes whose segment sequences differ crossfade instead, and that output is universal.
+
+## Install scripts
+
+`package.json` `allowScripts` pins the packages whose install scripts npm 11 may run — puppeteer's Chrome download among them. Update those entries whenever the pinned versions change, or the download is skipped and every headless render fails.
 
 ## Attribution
 
