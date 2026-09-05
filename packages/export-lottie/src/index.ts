@@ -1,5 +1,7 @@
+import { EASES } from '#ir/easing.ts';
 import { parsePath, type Segment } from '#ir/path.ts';
-import type { Clip, Rig, RigPart, Vec2 } from '#ir/types.ts';
+import { groupTracks, REST, type TracksByProperty } from '#ir/sample.ts';
+import type { Clip, Key, Rig, RigPart, Vec2 } from '#ir/types.ts';
 
 export interface LottieShapePath {
   ty: 'sh';
@@ -29,12 +31,32 @@ export interface LottieShapeGroup {
   nm: string;
 }
 
+export interface LottieKeyframe {
+  t: number;
+  s: number[];
+  e?: number[];
+  o?: { x: number[]; y: number[] };
+  i?: { x: number[]; y: number[] };
+}
+
+export interface LottieAnimatedProperty {
+  a: 1;
+  k: LottieKeyframe[];
+}
+
+export interface LottieStaticProperty<V> {
+  a: 0;
+  k: V;
+}
+
+export type LottieProperty<V> = LottieStaticProperty<V> | LottieAnimatedProperty;
+
 export interface LottieLayerTransform {
-  a: { a: 0; k: [number, number, number] };
-  p: { a: 0; k: [number, number, number] };
-  s: { a: 0; k: [number, number, number] };
-  r: { a: 0; k: number };
-  o: { a: 0; k: number };
+  a: LottieStaticProperty<[number, number, number]>;
+  p: LottieProperty<[number, number, number]>;
+  s: LottieProperty<[number, number, number]>;
+  r: LottieProperty<number>;
+  o: LottieProperty<number>;
 }
 
 export interface LottieLayer {
@@ -124,7 +146,63 @@ function readFill(hex: string): [number, number, number, number] {
   return [((n >> 16) & 0xff) / 255, ((n >> 8) & 0xff) / 255, (n & 0xff) / 255, 1];
 }
 
-function partLayer(rig: Rig, part: RigPart, ind: number, indexByName: Map<string, number>, ip: number, op: number): LottieLayer {
+/**
+ * Animated Lottie property from a track's keys: a keyframe per key except the last, each holding
+ * the ease of the segment ENDING at the next key as bezier tangents (`o` leaving this keyframe,
+ * `i` arriving at the next), then a final keyframe with just the resting value.
+ */
+function animatedProp<V>(keys: Key<V>[], fps: number, toArray: (v: V) => number[]): LottieAnimatedProperty {
+  const k: LottieKeyframe[] = keys.map((key, idx) => {
+    const t = key.t * fps;
+    const s = toArray(key.v);
+    const next = keys[idx + 1];
+    if (!next) return { t, s };
+    const [x1, y1, x2, y2] = EASES[next.ease ?? 'linear'];
+    return { t, s, e: toArray(next.v), o: { x: [x1], y: [y1] }, i: { x: [x2], y: [y2] } };
+  });
+  return { a: 1, k };
+}
+
+function positionProp(tracks: TracksByProperty, pivot: Vec2, fps: number): LottieProperty<[number, number, number]> {
+  const track = tracks.position;
+  if (!track || track.keys.length < 2) {
+    const v = track ? track.keys[0]!.v : REST.position;
+    return { a: 0, k: [pivot[0] + v[0], pivot[1] + v[1], 0] };
+  }
+  return animatedProp(track.keys, fps, (v) => [pivot[0] + v[0], pivot[1] + v[1], 0]);
+}
+
+function rotationProp(tracks: TracksByProperty, fps: number): LottieProperty<number> {
+  const track = tracks.rotation;
+  if (!track || track.keys.length < 2) return { a: 0, k: track ? track.keys[0]!.v : REST.rotation };
+  return animatedProp(track.keys, fps, (v) => [v]);
+}
+
+function scaleProp(tracks: TracksByProperty, fps: number): LottieProperty<[number, number, number]> {
+  const track = tracks.scale;
+  if (!track || track.keys.length < 2) {
+    const v = track ? track.keys[0]!.v : REST.scale;
+    return { a: 0, k: [v[0] * 100, v[1] * 100, 100] };
+  }
+  return animatedProp(track.keys, fps, (v) => [v[0] * 100, v[1] * 100, 100]);
+}
+
+function opacityProp(tracks: TracksByProperty, fps: number): LottieProperty<number> {
+  const track = tracks.opacity;
+  if (!track || track.keys.length < 2) return { a: 0, k: (track ? track.keys[0]!.v : REST.opacity) * 100 };
+  return animatedProp(track.keys, fps, (v) => [v * 100]);
+}
+
+function partLayer(
+  rig: Rig,
+  part: RigPart,
+  ind: number,
+  indexByName: Map<string, number>,
+  ip: number,
+  op: number,
+  tracks: TracksByProperty,
+  fps: number,
+): LottieLayer {
   const d = part.path;
   const shapes: LottieShapeGroup[] = [];
   if (d) {
@@ -153,10 +231,10 @@ function partLayer(rig: Rig, part: RigPart, ind: number, indexByName: Map<string
     sr: 1,
     ks: {
       a: { a: 0, k: [part.pivot[0], part.pivot[1], 0] },
-      p: { a: 0, k: [part.pivot[0], part.pivot[1], 0] },
-      s: { a: 0, k: [100, 100, 100] },
-      r: { a: 0, k: 0 },
-      o: { a: 0, k: 100 },
+      p: positionProp(tracks, part.pivot, fps),
+      s: scaleProp(tracks, fps),
+      r: rotationProp(tracks, fps),
+      o: opacityProp(tracks, fps),
     },
     ao: 0,
     shapes,
@@ -174,8 +252,11 @@ export function exportLottie(rig: Rig, clip: Clip): LottieJson {
   // 1-based indices, assigned in rig draw order (bottom first) so `parent` can reference them
   // regardless of the rendering order the layers array ends up in.
   const indexByName = new Map<string, number>(rig.parts.map((p, i) => [p.name, i + 1]));
+  const byPart = groupTracks(clip);
   // Lottie's layers array is front-to-back: the rig's bottom-first draw order must be reversed.
-  const layers = [...rig.parts].reverse().map((part) => partLayer(rig, part, indexByName.get(part.name)!, indexByName, ip, op));
+  const layers = [...rig.parts]
+    .reverse()
+    .map((part) => partLayer(rig, part, indexByName.get(part.name)!, indexByName, ip, op, byPart.get(part.name) ?? {}, clip.fps));
   return {
     v: '5.13.0',
     fr: clip.fps,
