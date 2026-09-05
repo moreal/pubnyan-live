@@ -30,7 +30,8 @@
     "pngjs": "^7.0.0",
     "puppeteer": "^25.10.0",
     "svg-path-bbox": "^2.1.0",
-    "svgpath": "^2.6.0"
+    "svgpath": "^2.6.0",
+    "valibot": "^1.4.2"
   },
   "devDependencies": {
     "@flue/cli": "^2.0.3",
