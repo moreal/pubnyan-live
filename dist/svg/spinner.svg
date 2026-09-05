@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 288 203" width="288" height="203">
+<title>spinner</title>
+<desc>pubnyan, the Hackers' Pub mascot, by Bak Eunji. CC BY-SA 4.0. https://github.com/hackers-pub/visual-identity</desc>
+<style>
+@keyframes star-t {
+  0% { transform: translate(141.1px, 71.92px) rotate(0deg) scale(1, 1) translate(-141.1px, -71.92px); }
+  1.6667% { transform: translate(141.1px, 71.92px) rotate(6deg) scale(1.0003, 1.0003) translate(-141.1px, -71.92px); }
+  3.3333% { transform: translate(141.1px, 71.92px) rotate(12deg) scale(1.0013, 1.0013) translate(-141.1px, -71.92px); }
+  5% { transform: translate(141.1px, 71.92px) rotate(18deg) scale(1.0029, 1.0029) translate(-141.1px, -71.92px); }
+  6.6667% { transform: translate(141.1px, 71.92px) rotate(24deg) scale(1.0051, 1.0051) translate(-141.1px, -71.92px); }
+  8.3333% { transform: translate(141.1px, 71.92px) rotate(30deg) scale(1.0079, 1.0079) translate(-141.1px, -71.92px); }
+  10% { transform: translate(141.1px, 71.92px) rotate(36deg) scale(1.0113, 1.0113) translate(-141.1px, -71.92px); }
+  11.6667% { transform: translate(141.1px, 71.92px) rotate(42deg) scale(1.0152, 1.0152) translate(-141.1px, -71.92px); }
+  13.3333% { transform: translate(141.1px, 71.92px) rotate(48deg) scale(1.0196, 1.0196) translate(-141.1px, -71.92px); }
+  15% { transform: translate(141.1px, 71.92px) rotate(54deg) scale(1.0245, 1.0245) translate(-141.1px, -71.92px); }
+  16.6667% { transform: translate(141.1px, 71.92px) rotate(60deg) scale(1.0298, 1.0298) translate(-141.1px, -71.92px); }
+  18.3333% { transform: translate(141.1px, 71.92px) rotate(66deg) scale(1.0354, 1.0354) translate(-141.1px, -71.92px); }
+  20% { transform: translate(141.1px, 71.92px) rotate(72deg) scale(1.0413, 1.0413) translate(-141.1px, -71.92px); }
+  21.6667% { transform: translate(141.1px, 71.92px) rotate(78deg) scale(1.0474, 1.0474) translate(-141.1px, -71.92px); }
+  23.3333% { transform: translate(141.1px, 71.92px) rotate(84deg) scale(1.0537, 1.0537) translate(-141.1px, -71.92px); }
+  25% { transform: translate(141.1px, 71.92px) rotate(90deg) scale(1.06, 1.06) translate(-141.1px, -71.92px); }
+  26.6667% { transform: translate(141.1px, 71.92px) rotate(96deg) scale(1.0663, 1.0663) translate(-141.1px, -71.92px); }
+  28.3333% { transform: translate(141.1px, 71.92px) rotate(102deg) scale(1.0726, 1.0726) translate(-141.1px, -71.92px); }
+  30% { transform: translate(141.1px, 71.92px) rotate(108deg) scale(1.0787, 1.0787) translate(-141.1px, -71.92px); }
+  31.6667% { transform: translate(141.1px, 71.92px) rotate(114deg) scale(1.0846, 1.0846) translate(-141.1px, -71.92px); }
+  33.3333% { transform: translate(141.1px, 71.92px) rotate(120deg) scale(1.0902, 1.0902) translate(-141.1px, -71.92px); }
+  35% { transform: translate(141.1px, 71.92px) rotate(126deg) scale(1.0955, 1.0955) translate(-141.1px, -71.92px); }
+  36.6667% { transform: translate(141.1px, 71.92px) rotate(132deg) scale(1.1004, 1.1004) translate(-141.1px, -71.92px); }
+  38.3333% { transform: translate(141.1px, 71.92px) rotate(138deg) scale(1.1048, 1.1048) translate(-141.1px, -71.92px); }
+  40% { transform: translate(141.1px, 71.92px) rotate(144deg) scale(1.1087, 1.1087) translate(-141.1px, -71.92px); }
+  41.6667% { transform: translate(141.1px, 71.92px) rotate(150deg) scale(1.1121, 1.1121) translate(-141.1px, -71.92px); }
+  43.3333% { transform: translate(141.1px, 71.92px) rotate(156deg) scale(1.1149, 1.1149) translate(-141.1px, -71.92px); }
+  45% { transform: translate(141.1px, 71.92px) rotate(162deg) scale(1.1171, 1.1171) translate(-141.1px, -71.92px); }
+  46.6667% { transform: translate(141.1px, 71.92px) rotate(168deg) scale(1.1187, 1.1187) translate(-141.1px, -71.92px); }
+  48.3333% { transform: translate(141.1px, 71.92px) rotate(174deg) scale(1.1197, 1.1197) translate(-141.1px, -71.92px); }
+  50% { transform: translate(141.1px, 71.92px) rotate(180deg) scale(1.12, 1.12) translate(-141.1px, -71.92px); }
+  51.6667% { transform: translate(141.1px, 71.92px) rotate(186deg) scale(1.1197, 1.1197) translate(-141.1px, -71.92px); }
+  53.3333% { transform: translate(141.1px, 71.92px) rotate(192deg) scale(1.1187, 1.1187) translate(-141.1px, -71.92px); }
+  55% { transform: translate(141.1px, 71.92px) rotate(198deg) scale(1.1171, 1.1171) translate(-141.1px, -71.92px); }
+  56.6667% { transform: translate(141.1px, 71.92px) rotate(204deg) scale(1.1149, 1.1149) translate(-141.1px, -71.92px); }
+  58.3333% { transform: translate(141.1px, 71.92px) rotate(210deg) scale(1.1121, 1.1121) translate(-141.1px, -71.92px); }
+  60% { transform: translate(141.1px, 71.92px) rotate(216deg) scale(1.1087, 1.1087) translate(-141.1px, -71.92px); }
+  61.6667% { transform: translate(141.1px, 71.92px) rotate(222deg) scale(1.1048, 1.1048) translate(-141.1px, -71.92px); }
+  63.3333% { transform: translate(141.1px, 71.92px) rotate(228deg) scale(1.1004, 1.1004) translate(-141.1px, -71.92px); }
+  65% { transform: translate(141.1px, 71.92px) rotate(234deg) scale(1.0955, 1.0955) translate(-141.1px, -71.92px); }
+  66.6667% { transform: translate(141.1px, 71.92px) rotate(240deg) scale(1.0902, 1.0902) translate(-141.1px, -71.92px); }
+  68.3333% { transform: translate(141.1px, 71.92px) rotate(246deg) scale(1.0846, 1.0846) translate(-141.1px, -71.92px); }
+  70% { transform: translate(141.1px, 71.92px) rotate(252deg) scale(1.0787, 1.0787) translate(-141.1px, -71.92px); }
+  71.6667% { transform: translate(141.1px, 71.92px) rotate(258deg) scale(1.0726, 1.0726) translate(-141.1px, -71.92px); }
+  73.3333% { transform: translate(141.1px, 71.92px) rotate(264deg) scale(1.0663, 1.0663) translate(-141.1px, -71.92px); }
+  75% { transform: translate(141.1px, 71.92px) rotate(270deg) scale(1.06, 1.06) translate(-141.1px, -71.92px); }
+  76.6667% { transform: translate(141.1px, 71.92px) rotate(276deg) scale(1.0537, 1.0537) translate(-141.1px, -71.92px); }
+  78.3333% { transform: translate(141.1px, 71.92px) rotate(282deg) scale(1.0474, 1.0474) translate(-141.1px, -71.92px); }
+  80% { transform: translate(141.1px, 71.92px) rotate(288deg) scale(1.0413, 1.0413) translate(-141.1px, -71.92px); }
+  81.6667% { transform: translate(141.1px, 71.92px) rotate(294deg) scale(1.0354, 1.0354) translate(-141.1px, -71.92px); }
+  83.3333% { transform: translate(141.1px, 71.92px) rotate(300deg) scale(1.0298, 1.0298) translate(-141.1px, -71.92px); }
+  85% { transform: translate(141.1px, 71.92px) rotate(306deg) scale(1.0245, 1.0245) translate(-141.1px, -71.92px); }
+  86.6667% { transform: translate(141.1px, 71.92px) rotate(312deg) scale(1.0196, 1.0196) translate(-141.1px, -71.92px); }
+  88.3333% { transform: translate(141.1px, 71.92px) rotate(318deg) scale(1.0152, 1.0152) translate(-141.1px, -71.92px); }
+  90% { transform: translate(141.1px, 71.92px) rotate(324deg) scale(1.0113, 1.0113) translate(-141.1px, -71.92px); }
+  91.6667% { transform: translate(141.1px, 71.92px) rotate(330deg) scale(1.0079, 1.0079) translate(-141.1px, -71.92px); }
+  93.3333% { transform: translate(141.1px, 71.92px) rotate(336deg) scale(1.0051, 1.0051) translate(-141.1px, -71.92px); }
+  95% { transform: translate(141.1px, 71.92px) rotate(342deg) scale(1.0029, 1.0029) translate(-141.1px, -71.92px); }
+  96.6667% { transform: translate(141.1px, 71.92px) rotate(348deg) scale(1.0013, 1.0013) translate(-141.1px, -71.92px); }
+  98.3333% { transform: translate(141.1px, 71.92px) rotate(354deg) scale(1.0003, 1.0003) translate(-141.1px, -71.92px); }
+  100% { transform: translate(141.1px, 71.92px) rotate(360deg) scale(1, 1) translate(-141.1px, -71.92px); }
+}
+</style>
+<g id="ring" style="transform-box: view-box; transform-origin: 0px 0px"><path d="M139.17 175.37C84.94 183.24 24.06 180.63 22.21 162.76C20.36 144.88 81.99 125.36 136.03 116.26C192.48 106.76 249.14 103.44 258.1 122.31C267.01 141.09 197.59 166.89 139.17 175.37ZM137.69 109.88C54.63 123.49 1.86 145.54 0.03 171.89C-1.42 192.84 43.58 212.3 145.14 197.69C252.61 182.24 296.08 144.34 286.69 123.46C277.1 102.13 223.18 95.88 137.69 109.88Z" fill="#000000"/></g>
+<g id="star" style="transform-box: view-box; transform-origin: 0px 0px; animation: star-t 2s linear infinite"><path d="M175.79 38.93C156.41 21.14 161.87 0 142.65 0C123.97 0 129.44 19.31 109.58 38.93C96.27 53.21 57.64 41.91 57.64 64.84C57.64 84.55 86.75 81.14 106.84 100.22C122.74 115.32 122.01 143.84 142.65 143.84C161.51 143.84 161.87 111.52 176.45 96.94C196.86 77.99 224.56 84.62 224.56 64.84C224.56 43.73 192.85 52.84 175.79 38.93Z" fill="#000000"/></g>
+</svg>
