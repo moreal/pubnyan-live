@@ -8,7 +8,7 @@ Work queue shared by humans and agents. Top item first. Mark `[x]` in the commit
 - [x] **export-lottie: transform keyframes.** Position, rotation, scale, opacity tracks become animated properties (`a: 1`) with bezier tangents from `EASES` (`o` and `i` handles: `o = {x: [x1], y: [y1]}`, `i = {x: [x2], y: [y2]}` on the outgoing keyframe). Parity on `spinner` and `idle` passes.
 - [x] **export-lottie: shape keyframes.** Morphable shape tracks animate the path; incompatible ones become one layer per expression with opacity keyframes (mirror `export-svg`). Parity passes on a test clip that morphs `normal -> angry -> normal` on `mouth`.
 - [x] **motion/machine.ts.** Write the pubnyan machine from the spec (`expression` enum, `react` trigger, `loading` bool; layers idle, expression, reaction) with `validateMachine` in `npm run verify`. States reference clips that exist at the time; add the clips first.
-- [ ] **.lottie bundle.** `dist/lottie/pubnyan.lottie` (zip with `manifest.json`, `animations/*.json`, and a dotLottie state machine derived from `motion/machine.ts`). Load it with `@lottiefiles/dotlottie-web` in the page and confirm the listed animations and inputs.
+- [x] **.lottie bundle.** `dist/lottie/pubnyan.lottie` (zip with `manifest.json`, `animations/*.json`, and a dotLottie state machine derived from `motion/machine.ts`). Load it with `@lottiefiles/dotlottie-web` in the page and confirm the listed animations and inputs.
 
 ## Phase 5: Rive
 
