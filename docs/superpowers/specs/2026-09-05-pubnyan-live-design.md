@@ -256,3 +256,27 @@ Phases 4 to 6 are written as backlog items and can be executed by subagents.
 - Integration: each exporter on the `spinner` clip, loaded back by the
   target's own runtime.
 - Parity: every clip, every target, in CI.
+
+## Revisions (2026-09-05, during planning)
+
+- Single npm package. `packages/*` are directories addressed by package.json
+  `imports` aliases (`#ir/*`, `#verify/*`, ...), not workspaces.
+- Flue's scaffold convention is kept: agents live in `src/agents/`,
+  persistence in `src/db.ts`.
+- Rig parts have an optional `parent`; transforms compose. In pubnyan every
+  part is a child of `body` because the source fuses head, ears, whiskers,
+  body, and the orbital ring into one silhouette. The ring cannot rotate
+  independently; `ring-gap-l/r` are animated to suggest motion. Head tilt is a
+  whole-body tilt.
+- The rig layers parts instead of reproducing the source's holes: black
+  silhouette, then white face and eyes, then black features. The `#outer`
+  selector picks the outline subpath.
+- Extra parts `tear-l`, `tear-r` exist for `cry`. Pupils are hidden in angry,
+  curious, shy.
+- Blink is a scale-y squash, not a shape morph, so it works in every target
+  without redrawn paths.
+- Zero-area subpaths in the source (shy file) are dropped automatically.
+- The spinner uses a second rig, `starorbit` (ring + star), from
+  `starorbit-transparent-287x202.svg`.
+- Verification renders in headless Chrome via puppeteer for every target,
+  including the reference; pages force a white background.
