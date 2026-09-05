@@ -9,6 +9,7 @@
     "#ir/*": "./packages/ir/src/*",
     "#rig-extract/*": "./packages/rig-extract/src/*",
     "#export-svg/*": "./packages/export-svg/src/*",
+    "#export-lottie/*": "./packages/export-lottie/src/*",
     "#verify/*": "./packages/verify/src/*",
     "#motion/*": "./motion/*",
     "#rig/*": "./rig/*"
@@ -19,6 +20,7 @@
     "rig:extract": "node packages/rig-extract/src/cli.ts extract",
     "rig:inspect": "node packages/rig-extract/src/cli.ts inspect",
     "export:svg": "node packages/export-svg/src/cli.ts",
+    "export:lottie": "node packages/export-lottie/src/cli.ts",
     "verify": "node packages/verify/src/cli.ts",
     "check": "npm run check:types && npm test && npm run verify",
     "agent": "node scripts/agent-loop.mjs"
@@ -26,6 +28,7 @@
   "dependencies": {
     "@flue/runtime": "^2.0.3",
     "@xmldom/xmldom": "^0.9.12",
+    "lottie-web": "^5.13.0",
     "pixelmatch": "^7.2.0",
     "pngjs": "^7.0.0",
     "puppeteer": "^25.10.0",
