@@ -16,6 +16,8 @@ export interface RigPart {
 export interface Rig {
   name: string;
   artboard: { width: number; height: number };
+  /** Licence and credit for the artwork the rig was traced from. */
+  attribution?: string;
   /** Draw order, bottom first. */
   parts: RigPart[];
   /** expression name -> part name -> path data (null = hidden in this expression). Missing part = default path. */

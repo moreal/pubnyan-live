@@ -33,39 +33,38 @@
         "angry": {
           "file": "pubnyan-angry-transparent.svg",
           "map": {
-            "body": "path55#outer", "face": "path45#outer",
+            "nose": "path49",
             "eye-l.white": "path47#outer", "eye-r.white": "path43#outer",
-            "ring-gap-l": "path53", "ring-gap-r": "path51",
-            "nose": "path49", "mouth": "path57"
+            "eye-l.pupil": null, "eye-r.pupil": null,
+            "mouth": "path57"
           }
         },
         "curious": {
           "file": "pubnyan-curious-transparent.svg",
           "map": {
-            "body": "path37#outer", "face": "path31#outer",
+            "nose": "path39",
             "eye-l.white": "path27#outer", "eye-r.white": "path29#outer",
-            "ring-gap-l": "path35", "ring-gap-r": "path33",
-            "nose": "path39", "mouth": "path41"
+            "eye-l.pupil": null, "eye-r.pupil": null,
+            "mouth": "path41"
           }
         },
         "cry": {
           "file": "pubnyan-cry-transparent.svg",
           "map": {
-            "body": "path81#outer", "face": "path63#outer",
+            "nose": "path73",
             "eye-l.white": "path59#outer", "eye-r.white": "path65#outer",
-            "ring-gap-l": "path79", "ring-gap-r": "path77",
-            "tear-l": "path61", "tear-r": "path67",
             "eye-l.pupil": "path69", "eye-r.pupil": "path71",
-            "nose": "path73", "mouth": "path75"
+            "tear-l": "path61", "tear-r": "path67",
+            "mouth": "path75"
           }
         },
         "shy": {
           "file": "pubnyan-shy-transparent.svg",
           "map": {
-            "body": "path103#outer", "face": "path87#outer",
+            "nose": "path89",
             "eye-l.white": "path85#outer", "eye-r.white": "path83#outer",
-            "ring-gap-l": "path97", "ring-gap-r": "path95",
-            "nose": "path89", "mouth": "path111"
+            "eye-l.pupil": null, "eye-r.pupil": null,
+            "mouth": "path111"
           }
         }
       }

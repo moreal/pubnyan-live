@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { parsePath } from '#ir/path.ts';
+import { resolvePath } from '#ir/sample.ts';
+import { ATTRIBUTION } from '#ir/svg.ts';
 import { validateRig } from '#ir/validate.ts';
 import { buildRig } from '#rig-extract/build-rig.ts';
 import { selectPath, type PartsMapRig } from '#rig-extract/parts-map.ts';
@@ -56,12 +58,32 @@ describe('buildRig', () => {
     expect(rig.parts[3].path).toBeNull();
     expect(rig.parts[3].pivot).toEqual([0, 0]);
   });
-  test('records every expression fully, aligning on the align part', () => {
+  test('records only the mapped parts of an expression, aligning on the align part', () => {
     expect(Object.keys(rig.expressions)).toEqual(['normal', 'shifted']);
-    expect(rig.expressions.normal.extra).toBeNull();
-    expect(rig.expressions.shifted.hole).toBeNull();
+    expect(Object.keys(rig.expressions.normal)).toEqual(['body', 'hole', 'nose']);
+    expect(Object.keys(rig.expressions.shifted)).toEqual(['body', 'nose', 'extra']);
+    expect('extra' in rig.expressions.normal).toBe(false);
+    expect('hole' in rig.expressions.shifted).toBe(false);
     expect(parsePath(rig.expressions.shifted.nose!)[0]).toEqual(['M', 4, 4]); // shifted by -10 to match normal's nose
     expect(parsePath(rig.expressions.shifted.body!)[1]).toEqual(['L', 0, 0]); // whole expression shifted together
     expect(parsePath(rig.expressions.shifted.extra!)).toHaveLength(9); // 4 segments + 5 segments
+  });
+
+  test('carries the artwork attribution', () => {
+    expect(rig.attribution).toBe(ATTRIBUTION);
+  });
+
+  test('an absent part inherits the default path; an explicit null hides it', () => {
+    const hole = rig.parts.find((p) => p.name === 'hole')!;
+    expect(resolvePath(rig, hole, 'shifted')).toBe(hole.path); // absent from `shifted` -> default path
+
+    const hidden = buildRig('t', { ...def, expressions: { ...def.expressions, shifted: { file: 'b.svg', map: { body: 'p1#outer', nose: 'n', hole: null } } } }, files);
+    expect(hidden.expressions.shifted.hole).toBeNull();
+    expect(resolvePath(hidden, hole, 'shifted')).toBeNull();
+  });
+
+  test('a non-default expression must map the align part', () => {
+    const def2: PartsMapRig = { ...def, expressions: { ...def.expressions, shifted: { file: 'b.svg', map: { body: 'p1#outer' } } } };
+    expect(() => buildRig('t', def2, files)).toThrow(/expression "shifted" must map the align part "nose"/);
   });
 });
