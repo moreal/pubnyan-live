@@ -25,6 +25,9 @@ const DESERIALIZER_TYPE: Record<string, PropertyType> = {
   String: 'string',
   Bool: 'bool',
   Color: 'color',
+  // `Id` (parentId, targetId, ...) is a single varuint on the `.riv` wire, the same TOC size
+  // class as `CoreUintType` (see `core_id_type.hpp`'s `id = 0` and its `runtimeDeserialize`).
+  Id: 'uint',
 };
 
 /**

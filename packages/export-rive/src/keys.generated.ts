@@ -23,7 +23,12 @@ export const KEYS: Record<string, ClassKeys> = {
   },
   "AnimationState": {
     "typeKey": 61,
-    "properties": {}
+    "properties": {
+      "animationId": {
+        "key": 149,
+        "type": "uint"
+      }
+    }
   },
   "AnyState": {
     "typeKey": 62,
@@ -39,16 +44,33 @@ export const KEYS: Record<string, ClassKeys> = {
       "originY": {
         "key": 12,
         "type": "double"
+      },
+      "defaultStateMachineId": {
+        "key": 236,
+        "type": "uint"
+      },
+      "viewModelId": {
+        "key": 583,
+        "type": "uint"
       }
     }
   },
   "ArtboardComponentList": {
     "typeKey": 559,
-    "properties": {}
+    "properties": {
+      "listSource": {
+        "key": 800,
+        "type": "uint"
+      }
+    }
   },
   "ArtboardComponentListOverride": {
     "typeKey": 606,
     "properties": {
+      "artboardId": {
+        "key": 858,
+        "type": "uint"
+      },
       "instanceWidth": {
         "key": 859,
         "type": "double"
@@ -77,7 +99,16 @@ export const KEYS: Record<string, ClassKeys> = {
   },
   "ArtboardListMapRule": {
     "typeKey": 648,
-    "properties": {}
+    "properties": {
+      "artboardId": {
+        "key": 934,
+        "type": "uint"
+      },
+      "viewModelId": {
+        "key": 935,
+        "type": "uint"
+      }
+    }
   },
   "Asset": {
     "typeKey": 99,
@@ -94,7 +125,12 @@ export const KEYS: Record<string, ClassKeys> = {
   },
   "AudioEvent": {
     "typeKey": 407,
-    "properties": {}
+    "properties": {
+      "assetId": {
+        "key": 408,
+        "type": "uint"
+      }
+    }
   },
   "Axis": {
     "typeKey": 492,
@@ -153,11 +189,21 @@ export const KEYS: Record<string, ClassKeys> = {
   },
   "BindablePropertyEnum": {
     "typeKey": 474,
-    "properties": {}
+    "properties": {
+      "propertyValue": {
+        "key": 637,
+        "type": "uint"
+      }
+    }
   },
   "BindablePropertyId": {
     "typeKey": 596,
-    "properties": {}
+    "properties": {
+      "propertyValue": {
+        "key": 823,
+        "type": "uint"
+      }
+    }
   },
   "BindablePropertyInteger": {
     "typeKey": 567,
@@ -170,7 +216,12 @@ export const KEYS: Record<string, ClassKeys> = {
   },
   "BindablePropertyList": {
     "typeKey": 590,
-    "properties": {}
+    "properties": {
+      "propertyValue": {
+        "key": 835,
+        "type": "uint"
+      }
+    }
   },
   "BindablePropertyNumber": {
     "typeKey": 473,
@@ -200,7 +251,12 @@ export const KEYS: Record<string, ClassKeys> = {
   },
   "BlendAnimation": {
     "typeKey": 74,
-    "properties": {}
+    "properties": {
+      "animationId": {
+        "key": 165,
+        "type": "uint"
+      }
+    }
   },
   "BlendAnimation1D": {
     "typeKey": 75,
@@ -214,6 +270,10 @@ export const KEYS: Record<string, ClassKeys> = {
   "BlendAnimationDirect": {
     "typeKey": 77,
     "properties": {
+      "inputId": {
+        "key": 168,
+        "type": "uint"
+      },
       "mixValue": {
         "key": 297,
         "type": "double"
@@ -234,7 +294,12 @@ export const KEYS: Record<string, ClassKeys> = {
   },
   "BlendState1DInput": {
     "typeKey": 76,
-    "properties": {}
+    "properties": {
+      "inputId": {
+        "key": 167,
+        "type": "uint"
+      }
+    }
   },
   "BlendState1DViewModel": {
     "typeKey": 528,
@@ -246,7 +311,12 @@ export const KEYS: Record<string, ClassKeys> = {
   },
   "BlendStateTransition": {
     "typeKey": 78,
-    "properties": {}
+    "properties": {
+      "exitBlendAnimationId": {
+        "key": 171,
+        "type": "uint"
+      }
+    }
   },
   "BlobAsset": {
     "typeKey": 649,
@@ -268,6 +338,10 @@ export const KEYS: Record<string, ClassKeys> = {
   "ClippingShape": {
     "typeKey": 42,
     "properties": {
+      "sourceId": {
+        "key": 92,
+        "type": "uint"
+      },
       "fillRule": {
         "key": 93,
         "type": "uint"
@@ -284,6 +358,10 @@ export const KEYS: Record<string, ClassKeys> = {
       "name": {
         "key": 4,
         "type": "string"
+      },
+      "parentId": {
+        "key": 5,
+        "type": "uint"
       }
     }
   },
@@ -467,7 +545,16 @@ export const KEYS: Record<string, ClassKeys> = {
   },
   "CustomPropertyEnum": {
     "typeKey": 616,
-    "properties": {}
+    "properties": {
+      "propertyValue": {
+        "key": 872,
+        "type": "uint"
+      },
+      "enumId": {
+        "key": 873,
+        "type": "uint"
+      }
+    }
   },
   "CustomPropertyGroup": {
     "typeKey": 548,
@@ -536,6 +623,10 @@ export const KEYS: Record<string, ClassKeys> = {
       "flags": {
         "key": 587,
         "type": "uint"
+      },
+      "converterId": {
+        "key": 660,
+        "type": "uint"
       }
     }
   },
@@ -580,13 +671,22 @@ export const KEYS: Record<string, ClassKeys> = {
   },
   "DataConverterGroupItem": {
     "typeKey": 498,
-    "properties": {}
+    "properties": {
+      "converterId": {
+        "key": 679,
+        "type": "uint"
+      }
+    }
   },
   "DataConverterInterpolator": {
     "typeKey": 534,
     "properties": {
       "interpolationType": {
         "key": 757,
+        "type": "uint"
+      },
+      "interpolatorId": {
+        "key": 758,
         "type": "uint"
       },
       "duration": {
@@ -601,7 +701,12 @@ export const KEYS: Record<string, ClassKeys> = {
   },
   "DataConverterNumberToList": {
     "typeKey": 568,
-    "properties": {}
+    "properties": {
+      "viewModelId": {
+        "key": 816,
+        "type": "uint"
+      }
+    }
   },
   "DataConverterOperation": {
     "typeKey": 516,
@@ -630,6 +735,10 @@ export const KEYS: Record<string, ClassKeys> = {
     "properties": {
       "interpolationType": {
         "key": 713,
+        "type": "uint"
+      },
+      "interpolatorId": {
+        "key": 714,
         "type": "uint"
       },
       "flags": {
@@ -785,11 +894,20 @@ export const KEYS: Record<string, ClassKeys> = {
   },
   "DrawRules": {
     "typeKey": 49,
-    "properties": {}
+    "properties": {
+      "drawTargetId": {
+        "key": 121,
+        "type": "uint"
+      }
+    }
   },
   "DrawTarget": {
     "typeKey": 48,
     "properties": {
+      "drawableId": {
+        "key": 119,
+        "type": "uint"
+      },
       "placementValue": {
         "key": 120,
         "type": "uint"
@@ -942,7 +1060,12 @@ export const KEYS: Record<string, ClassKeys> = {
   },
   "FocusActionTarget": {
     "typeKey": 652,
-    "properties": {}
+    "properties": {
+      "targetId": {
+        "key": 952,
+        "type": "uint"
+      }
+    }
   },
   "FocusActionTraversal": {
     "typeKey": 672,
@@ -1134,6 +1257,10 @@ export const KEYS: Record<string, ClassKeys> = {
   "Image": {
     "typeKey": 100,
     "properties": {
+      "assetId": {
+        "key": 206,
+        "type": "uint"
+      },
       "originX": {
         "key": 380,
         "type": "double"
@@ -1191,6 +1318,10 @@ export const KEYS: Record<string, ClassKeys> = {
       "interpolationType": {
         "key": 68,
         "type": "uint"
+      },
+      "interpolatorId": {
+        "key": 69,
+        "type": "uint"
       }
     }
   },
@@ -1229,8 +1360,20 @@ export const KEYS: Record<string, ClassKeys> = {
         "key": 306,
         "type": "double"
       },
+      "xId": {
+        "key": 301,
+        "type": "uint"
+      },
+      "yId": {
+        "key": 302,
+        "type": "uint"
+      },
       "joystickFlags": {
         "key": 312,
+        "type": "uint"
+      },
+      "handleSourceId": {
+        "key": 313,
         "type": "uint"
       }
     }
@@ -1277,7 +1420,12 @@ export const KEYS: Record<string, ClassKeys> = {
   },
   "KeyFrameId": {
     "typeKey": 50,
-    "properties": {}
+    "properties": {
+      "value": {
+        "key": 122,
+        "type": "uint"
+      }
+    }
   },
   "KeyFrameInt": {
     "typeKey": 1067,
@@ -1324,7 +1472,12 @@ export const KEYS: Record<string, ClassKeys> = {
   },
   "KeyedObject": {
     "typeKey": 25,
-    "properties": {}
+    "properties": {
+      "objectId": {
+        "key": 51,
+        "type": "uint"
+      }
+    }
   },
   "KeyedProperty": {
     "typeKey": 26,
@@ -1358,6 +1511,10 @@ export const KEYS: Record<string, ClassKeys> = {
       "height": {
         "key": 8,
         "type": "double"
+      },
+      "styleId": {
+        "key": 494,
+        "type": "uint"
       },
       "fractionalWidth": {
         "key": 706,
@@ -1467,6 +1624,10 @@ export const KEYS: Record<string, ClassKeys> = {
       "aspectRatio": {
         "key": 524,
         "type": "double"
+      },
+      "interpolatorId": {
+        "key": 591,
+        "type": "uint"
       },
       "interpolationTime": {
         "key": 592,
@@ -1761,7 +1922,12 @@ export const KEYS: Record<string, ClassKeys> = {
   },
   "ListPath": {
     "typeKey": 619,
-    "properties": {}
+    "properties": {
+      "listSource": {
+        "key": 874,
+        "type": "uint"
+      }
+    }
   },
   "ListenerAction": {
     "typeKey": 125,
@@ -1775,6 +1941,10 @@ export const KEYS: Record<string, ClassKeys> = {
   "ListenerAlignTarget": {
     "typeKey": 126,
     "properties": {
+      "targetId": {
+        "key": 240,
+        "type": "uint"
+      },
       "preserveOffset": {
         "key": 541,
         "type": "bool"
@@ -1792,11 +1962,25 @@ export const KEYS: Record<string, ClassKeys> = {
   },
   "ListenerFireEvent": {
     "typeKey": 168,
-    "properties": {}
+    "properties": {
+      "eventId": {
+        "key": 389,
+        "type": "uint"
+      }
+    }
   },
   "ListenerInputChange": {
     "typeKey": 116,
-    "properties": {}
+    "properties": {
+      "inputId": {
+        "key": 227,
+        "type": "uint"
+      },
+      "nestedInputId": {
+        "key": 400,
+        "type": "uint"
+      }
+    }
   },
   "ListenerInputType": {
     "typeKey": 658,
@@ -1809,7 +1993,12 @@ export const KEYS: Record<string, ClassKeys> = {
   },
   "ListenerInputTypeEvent": {
     "typeKey": 659,
-    "properties": {}
+    "properties": {
+      "eventId": {
+        "key": 962,
+        "type": "uint"
+      }
+    }
   },
   "ListenerInputTypeGamepad": {
     "typeKey": 973,
@@ -1909,11 +2098,20 @@ export const KEYS: Record<string, ClassKeys> = {
   },
   "NestedAnimation": {
     "typeKey": 93,
-    "properties": {}
+    "properties": {
+      "animationId": {
+        "key": 198,
+        "type": "uint"
+      }
+    }
   },
   "NestedArtboard": {
     "typeKey": 92,
     "properties": {
+      "artboardId": {
+        "key": 197,
+        "type": "uint"
+      },
       "isPaused": {
         "key": 895,
         "type": "bool"
@@ -1993,7 +2191,12 @@ export const KEYS: Record<string, ClassKeys> = {
   },
   "NestedInput": {
     "typeKey": 121,
-    "properties": {}
+    "properties": {
+      "inputId": {
+        "key": 237,
+        "type": "uint"
+      }
+    }
   },
   "NestedLinearAnimation": {
     "typeKey": 97,
@@ -2202,7 +2405,12 @@ export const KEYS: Record<string, ClassKeys> = {
   },
   "ScriptInputArtboard": {
     "typeKey": 621,
-    "properties": {}
+    "properties": {
+      "artboardId": {
+        "key": 876,
+        "type": "uint"
+      }
+    }
   },
   "ScriptInputBoolean": {
     "typeKey": 631,
@@ -2239,15 +2447,30 @@ export const KEYS: Record<string, ClassKeys> = {
   },
   "ScriptedDataConverter": {
     "typeKey": 629,
-    "properties": {}
+    "properties": {
+      "scriptAssetId": {
+        "key": 892,
+        "type": "uint"
+      }
+    }
   },
   "ScriptedDrawable": {
     "typeKey": 603,
-    "properties": {}
+    "properties": {
+      "scriptAssetId": {
+        "key": 848,
+        "type": "uint"
+      }
+    }
   },
   "ScriptedInterpolator": {
     "typeKey": 972,
-    "properties": {}
+    "properties": {
+      "scriptAssetId": {
+        "key": 1015,
+        "type": "uint"
+      }
+    }
   },
   "ScriptedLayout": {
     "typeKey": 637,
@@ -2255,19 +2478,38 @@ export const KEYS: Record<string, ClassKeys> = {
   },
   "ScriptedListenerAction": {
     "typeKey": 646,
-    "properties": {}
+    "properties": {
+      "scriptAssetId": {
+        "key": 930,
+        "type": "uint"
+      }
+    }
   },
   "ScriptedPathEffect": {
     "typeKey": 640,
-    "properties": {}
+    "properties": {
+      "scriptAssetId": {
+        "key": 912,
+        "type": "uint"
+      }
+    }
   },
   "ScriptedTransitionCondition": {
     "typeKey": 647,
-    "properties": {}
+    "properties": {
+      "scriptAssetId": {
+        "key": 931,
+        "type": "uint"
+      }
+    }
   },
   "ScrollBarConstraint": {
     "typeKey": 522,
     "properties": {
+      "scrollConstraintId": {
+        "key": 725,
+        "type": "uint"
+      },
       "autoSize": {
         "key": 734,
         "type": "bool"
@@ -2291,6 +2533,10 @@ export const KEYS: Record<string, ClassKeys> = {
       },
       "physicsTypeValue": {
         "key": 727,
+        "type": "uint"
+      },
+      "physicsId": {
+        "key": 726,
         "type": "uint"
       },
       "virtualize": {
@@ -2321,7 +2567,12 @@ export const KEYS: Record<string, ClassKeys> = {
   },
   "ScrollPhysics": {
     "typeKey": 523,
-    "properties": {}
+    "properties": {
+      "constraintId": {
+        "key": 731,
+        "type": "uint"
+      }
+    }
   },
   "SemanticData": {
     "typeKey": 668,
@@ -2430,7 +2681,12 @@ export const KEYS: Record<string, ClassKeys> = {
   },
   "Solo": {
     "typeKey": 147,
-    "properties": {}
+    "properties": {
+      "activeComponentId": {
+        "key": 296,
+        "type": "uint"
+      }
+    }
   },
   "Star": {
     "typeKey": 52,
@@ -2474,7 +2730,12 @@ export const KEYS: Record<string, ClassKeys> = {
   },
   "StateMachineFireEvent": {
     "typeKey": 169,
-    "properties": {}
+    "properties": {
+      "eventId": {
+        "key": 392,
+        "type": "uint"
+      }
+    }
   },
   "StateMachineFireTrigger": {
     "typeKey": 614,
@@ -2494,13 +2755,22 @@ export const KEYS: Record<string, ClassKeys> = {
   },
   "StateMachineListener": {
     "typeKey": 654,
-    "properties": {}
+    "properties": {
+      "targetId": {
+        "key": 224,
+        "type": "uint"
+      }
+    }
   },
   "StateMachineListenerSingle": {
     "typeKey": 114,
     "properties": {
       "listenerTypeValue": {
         "key": 225,
+        "type": "uint"
+      },
+      "eventId": {
+        "key": 399,
         "type": "uint"
       }
     }
@@ -2521,6 +2791,10 @@ export const KEYS: Record<string, ClassKeys> = {
   "StateTransition": {
     "typeKey": 65,
     "properties": {
+      "stateToId": {
+        "key": 151,
+        "type": "uint"
+      },
       "flags": {
         "key": 152,
         "type": "uint"
@@ -2535,6 +2809,10 @@ export const KEYS: Record<string, ClassKeys> = {
       },
       "interpolationType": {
         "key": 349,
+        "type": "uint"
+      },
+      "interpolatorId": {
+        "key": 350,
         "type": "uint"
       },
       "randomWeight": {
@@ -2575,15 +2853,29 @@ export const KEYS: Record<string, ClassKeys> = {
   },
   "TargetEffect": {
     "typeKey": 644,
-    "properties": {}
+    "properties": {
+      "targetId": {
+        "key": 922,
+        "type": "uint"
+      }
+    }
   },
   "TargetedConstraint": {
     "typeKey": 80,
-    "properties": {}
+    "properties": {
+      "targetId": {
+        "key": 173,
+        "type": "uint"
+      }
+    }
   },
   "Tendon": {
     "typeKey": 44,
     "properties": {
+      "boneId": {
+        "key": 95,
+        "type": "uint"
+      },
       "xx": {
         "key": 96,
         "type": "double"
@@ -2660,6 +2952,10 @@ export const KEYS: Record<string, ClassKeys> = {
       "fitFromBaseline": {
         "key": 703,
         "type": "bool"
+      },
+      "textRunListSource": {
+        "key": 932,
+        "type": "uint"
       },
       "verticalTrimValue": {
         "key": 1026,
@@ -2841,6 +3137,10 @@ export const KEYS: Record<string, ClassKeys> = {
       "offset": {
         "key": 319,
         "type": "double"
+      },
+      "runId": {
+        "key": 378,
+        "type": "uint"
       }
     }
   },
@@ -2862,6 +3162,10 @@ export const KEYS: Record<string, ClassKeys> = {
       "letterSpacing": {
         "key": 390,
         "type": "double"
+      },
+      "fontAssetId": {
+        "key": 279,
+        "type": "uint"
       }
     }
   },
@@ -2906,11 +3210,20 @@ export const KEYS: Record<string, ClassKeys> = {
   },
   "TextTargetModifier": {
     "typeKey": 546,
-    "properties": {}
+    "properties": {
+      "targetId": {
+        "key": 778,
+        "type": "uint"
+      }
+    }
   },
   "TextValueRun": {
     "typeKey": 135,
     "properties": {
+      "styleId": {
+        "key": 272,
+        "type": "uint"
+      },
       "text": {
         "key": 268,
         "type": "string"
@@ -3061,7 +3374,12 @@ export const KEYS: Record<string, ClassKeys> = {
   },
   "TransitionInputCondition": {
     "typeKey": 67,
-    "properties": {}
+    "properties": {
+      "inputId": {
+        "key": 155,
+        "type": "uint"
+      }
+    }
   },
   "TransitionNumberCondition": {
     "typeKey": 70,
@@ -3088,6 +3406,10 @@ export const KEYS: Record<string, ClassKeys> = {
   "TransitionPropertyComponentComparator": {
     "typeKey": 667,
     "properties": {
+      "objectId": {
+        "key": 977,
+        "type": "uint"
+      },
       "propertyKey": {
         "key": 978,
         "type": "uint"
@@ -3151,7 +3473,12 @@ export const KEYS: Record<string, ClassKeys> = {
   },
   "TransitionValueIdComparator": {
     "typeKey": 601,
-    "properties": {}
+    "properties": {
+      "value": {
+        "key": 653,
+        "type": "uint"
+      }
+    }
   },
   "TransitionValueNumberComparator": {
     "typeKey": 484,
@@ -3255,15 +3582,30 @@ export const KEYS: Record<string, ClassKeys> = {
   },
   "ViewModelInstance": {
     "typeKey": 437,
-    "properties": {}
+    "properties": {
+      "viewModelId": {
+        "key": 566,
+        "type": "uint"
+      }
+    }
   },
   "ViewModelInstanceArtboard": {
     "typeKey": 599,
-    "properties": {}
+    "properties": {
+      "propertyValue": {
+        "key": 846,
+        "type": "uint"
+      }
+    }
   },
   "ViewModelInstanceAsset": {
     "typeKey": 586,
-    "properties": {}
+    "properties": {
+      "propertyValue": {
+        "key": 824,
+        "type": "uint"
+      }
+    }
   },
   "ViewModelInstanceAssetBlob": {
     "typeKey": 1044,
@@ -3297,15 +3639,34 @@ export const KEYS: Record<string, ClassKeys> = {
   },
   "ViewModelInstanceEnum": {
     "typeKey": 432,
-    "properties": {}
+    "properties": {
+      "propertyValue": {
+        "key": 560,
+        "type": "uint"
+      }
+    }
   },
   "ViewModelInstanceList": {
     "typeKey": 441,
-    "properties": {}
+    "properties": {
+      "listSource": {
+        "key": 966,
+        "type": "uint"
+      }
+    }
   },
   "ViewModelInstanceListItem": {
     "typeKey": 427,
-    "properties": {}
+    "properties": {
+      "viewModelId": {
+        "key": 549,
+        "type": "uint"
+      },
+      "viewModelInstanceId": {
+        "key": 550,
+        "type": "uint"
+      }
+    }
   },
   "ViewModelInstanceNumber": {
     "typeKey": 442,
@@ -3349,11 +3710,21 @@ export const KEYS: Record<string, ClassKeys> = {
   },
   "ViewModelInstanceValue": {
     "typeKey": 428,
-    "properties": {}
+    "properties": {
+      "viewModelPropertyId": {
+        "key": 554,
+        "type": "uint"
+      }
+    }
   },
   "ViewModelInstanceViewModel": {
     "typeKey": 444,
-    "properties": {}
+    "properties": {
+      "propertyValue": {
+        "key": 577,
+        "type": "uint"
+      }
+    }
   },
   "ViewModelProperty": {
     "typeKey": 430,
@@ -3402,7 +3773,12 @@ export const KEYS: Record<string, ClassKeys> = {
   },
   "ViewModelPropertyEnumCustom": {
     "typeKey": 439,
-    "properties": {}
+    "properties": {
+      "enumId": {
+        "key": 574,
+        "type": "uint"
+      }
+    }
   },
   "ViewModelPropertyEnumSystem": {
     "typeKey": 511,
@@ -3439,7 +3815,12 @@ export const KEYS: Record<string, ClassKeys> = {
   },
   "ViewModelPropertyViewModel": {
     "typeKey": 436,
-    "properties": {}
+    "properties": {
+      "viewModelReferenceId": {
+        "key": 565,
+        "type": "uint"
+      }
+    }
   },
   "Weight": {
     "typeKey": 45,
