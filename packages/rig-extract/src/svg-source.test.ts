@@ -28,3 +28,17 @@ test('splitSubpaths closes open subpaths and keeps curves absolute', () => {
   expect(subs).toHaveLength(1);
   expect(subs[0].d).toBe('M0 0C1 1 2 2 3 3L5 5Z');
 });
+
+// H/V are illegal in rig path data (M/L/C/Z only); splitSubpaths must rewrite them as L.
+test('splitSubpaths converts H/V to L, tracking the cursor across separate subpaths', () => {
+  const subs = splitSubpaths('M0 0H10V10Z M20 20H30V30Z');
+  expect(subs.map((s) => s.d)).toEqual(['M0 0L10 0L10 10Z', 'M20 20L30 20L30 30Z']);
+});
+
+// After Z the current point resets to the subpath's start, not to wherever the preceding H/V left it;
+// an H/V right after Z (no intervening M) must use that reset point.
+test('splitSubpaths resets the cursor to the subpath start after Z before applying a following H/V', () => {
+  const subs = splitSubpaths('M0 0L10 0L10 10ZH5V5Z');
+  expect(subs).toHaveLength(1);
+  expect(subs[0].d).toBe('M0 0L10 0L10 10ZL5 0L5 5Z');
+});
