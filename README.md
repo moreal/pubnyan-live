@@ -21,6 +21,8 @@ npm run export:svg      # write dist/svg/<clip>.svg
 npm run verify          # export every target, check parity against the reference sampler
 npm test
 npm run check:types
+npm run check          # type check + tests + verify
+npm run agent -- 1     # let the Flue director complete one backlog item (needs ANTHROPIC_API_KEY in .env)
 ```
 
 ## Output notes

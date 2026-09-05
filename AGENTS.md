@@ -20,3 +20,9 @@ pubnyan animations. One motion definition in `motion/` is exported to several ta
 - `npm run rig:extract` / `npm run rig:inspect <file.svg>`
 - `npm run export:svg`, `npm run verify`, `npm test`, `npm run check:types`
 - `npx flue run src/agents/director.ts -m next --id pubnyan` — run the director once (phase 6).
+
+## The agent loop
+
+- `npm run agent -- 1` completes one backlog item: the Director (src/agents/director.ts) delegates to the Implementer, has the Reviewer check it, commits on `agent/backlog`, and marks the item done. Needs `ANTHROPIC_API_KEY` in `.env`.
+- Commits happen only through the `git_commit` tool, which runs `npm run check` first and refuses on failure.
+- Merge `agent/backlog` into `main` after looking at the contact sheets. The GitHub workflow `agent` does the same on demand and opens a PR.
