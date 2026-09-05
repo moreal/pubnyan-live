@@ -1,0 +1,17 @@
+import type { Clip, Rig } from '#ir/types.ts';
+import pubnyanRig from '#rig/pubnyan.rig.json' with { type: 'json' };
+import starorbitRig from '#rig/starorbit.rig.json' with { type: 'json' };
+import spinner from '#motion/clips/spinner.clip.ts';
+
+export const rigs: Record<string, Rig> = {
+  pubnyan: pubnyanRig as unknown as Rig,
+  starorbit: starorbitRig as unknown as Rig,
+};
+
+export const clips: Clip[] = [spinner];
+
+export function getRig(name: string): Rig {
+  const rig = rigs[name];
+  if (!rig) throw new Error(`unknown rig "${name}"; known: ${Object.keys(rigs).join(', ')}`);
+  return rig;
+}
