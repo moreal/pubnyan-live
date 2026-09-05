@@ -7,10 +7,9 @@ const LOTTIE_WEB = new URL('../../../../node_modules/lottie-web/build/player/lot
 
 export const lottieTarget: Target = {
   name: 'lottie',
-  // Static-frame exporter only (backlog "static frame" item): the exported JSON has no keyframes,
-  // so only t=0 is expected to match the reference. "transform keyframes" / "shape keyframes"
-  // widen this as they land.
-  supportsTime: (_clip, t) => t === 0,
+  // Transform tracks (position/rotation/scale/opacity) are keyframed now; shape tracks are not
+  // yet ("shape keyframes" backlog item), so a clip using one still only matches at t=0.
+  supportsTime: (clip, t) => t === 0 || !clip.tracks.some((tr) => tr.property === 'shape'),
   async export(rig, clip, outDir) {
     await mkdir(outDir, { recursive: true });
     const file = join(outDir, `${clip.name}.json`);
