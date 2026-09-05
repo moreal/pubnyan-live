@@ -11,4 +11,8 @@ jobs:
       - run: npm ci
       - run: npm run check:types
       - run: npm test
+      - run: npm run rig:extract
+      - run: npm run export:svg
       - run: npm run verify
+      # Committed artifacts must match what the source regenerates.
+      - run: git diff --exit-code -- dist/svg rig
