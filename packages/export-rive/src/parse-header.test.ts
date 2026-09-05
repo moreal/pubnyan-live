@@ -30,6 +30,29 @@ describe('parseBaseHeader', () => {
     expect(properties.tint).toEqual({ key: 105, type: 'color' });
   });
 
+  test('an Id field (parentId, targetId, ...) is a uint on the wire, per CoreIdType::runtimeDeserialize', () => {
+    const source = `
+      class FooBase : public Component {
+        public:
+          static const uint16_t typeKey = 1;
+          static const uint16_t parentIdPropertyKey = 5;
+        protected:
+          Id m_ParentId = 0;
+        public:
+          bool deserialize(uint16_t propertyKey, BinaryReader& reader) override {
+              switch (propertyKey) {
+                  case parentIdPropertyKey:
+                      m_ParentId = CoreIdType::runtimeDeserialize(reader);
+                      return true;
+              }
+              return false;
+          }
+      };
+    `;
+    const classes = parseBaseHeader(source);
+    expect(classes.Foo).toEqual({ typeKey: 1, properties: { parentId: { key: 5, type: 'uint' } } });
+  });
+
   test('parses every class in a multi-class file', () => {
     const source = `
       class FooBase : public Component {
