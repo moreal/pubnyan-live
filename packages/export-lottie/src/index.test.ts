@@ -41,6 +41,7 @@ describe('exportLottie', () => {
     const group = a.shapes[0]!;
     const sh = group.it.find((it) => it.ty === 'sh') as Extract<LottieShapeGroup['it'][number], { ty: 'sh' }>;
     const fl = group.it.find((it) => it.ty === 'fl') as Extract<LottieShapeGroup['it'][number], { ty: 'fl' }>;
+    if (sh.ks.a !== 0) throw new Error('expected a static shape');
     expect(sh.ks.k.v).toEqual([
       [0, 0],
       [10, 0],

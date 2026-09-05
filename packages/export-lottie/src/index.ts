@@ -1,11 +1,28 @@
 import { EASES } from '#ir/easing.ts';
-import { parsePath, type Segment } from '#ir/path.ts';
-import { groupTracks, REST, type TracksByProperty } from '#ir/sample.ts';
-import type { Clip, Key, Rig, RigPart, Vec2 } from '#ir/types.ts';
+import { interpolatePath, parsePath, type Segment } from '#ir/path.ts';
+import { locate, groupTracks, REST, resolvePath, sampleNumeric, type TracksByProperty } from '#ir/sample.ts';
+import type { Clip, Key, Rig, RigPart, Track, Vec2 } from '#ir/types.ts';
+
+export interface LottieShapeValue {
+  i: number[][];
+  o: number[][];
+  v: number[][];
+  c: boolean;
+}
+
+export type LottieShapeKeyframe = {
+  t: number;
+  s: [LottieShapeValue];
+  e?: [LottieShapeValue];
+  o?: { x: number[]; y: number[] };
+  i?: { x: number[]; y: number[] };
+};
+
+export type LottieShapeProperty = { a: 0; k: LottieShapeValue } | { a: 1; k: LottieShapeKeyframe[] };
 
 export interface LottieShapePath {
   ty: 'sh';
-  ks: { a: 0; k: { i: number[][]; o: number[][]; v: number[][]; c: boolean } };
+  ks: LottieShapeProperty;
   nm: string;
 }
 
@@ -122,14 +139,18 @@ function subpathToShape(segs: Segment[]): { v: Vec2[]; i: Vec2[]; o: Vec2[]; c: 
 }
 
 /** Splits absolute M/L/C/Z path data on each M into its subpaths (a fill can have several, e.g. a ring). */
-function pathToShapes(d: string, namePrefix: string): LottieShapePath[] {
+function splitSubpaths(d: string): Segment[][] {
   const segs = parsePath(d);
   const subpaths: Segment[][] = [];
   for (const seg of segs) {
     if (seg[0] === 'M') subpaths.push([seg]);
     else subpaths[subpaths.length - 1]!.push(seg);
   }
-  return subpaths.map((sub, idx) => {
+  return subpaths;
+}
+
+function pathToShapes(d: string, namePrefix: string): LottieShapePath[] {
+  return splitSubpaths(d).map((sub, idx) => {
     const shape = subpathToShape(sub);
     return {
       ty: 'sh',
@@ -137,6 +158,76 @@ function pathToShapes(d: string, namePrefix: string): LottieShapePath[] {
       nm: `${namePrefix}-${idx}`,
     };
   });
+}
+
+/** Whether every consecutive pair of expressions resolved by a shape track's keys morphs (same command sequence). */
+function isMorphable(rig: Rig, part: RigPart, track: Track<'shape'>): boolean {
+  const paths = track.keys.map((k) => resolvePath(rig, part, k.v));
+  return paths.every((d, i) => i === 0 || (d !== null && paths[i - 1] !== null && interpolatePath(paths[i - 1]!, d, 0) !== null));
+}
+
+/** One animated `sh` shape per subpath, morphing vertex-for-vertex between the resolved paths of a track's keys. */
+function morphableShapeItems(rig: Rig, part: RigPart, track: Track<'shape'>, fps: number): LottieShapePath[] {
+  const paths = track.keys.map((k) => resolvePath(rig, part, k.v)!);
+  const subpathsPerKey = paths.map(splitSubpaths);
+  const count = subpathsPerKey[0]!.length;
+  const items: LottieShapePath[] = [];
+  for (let s = 0; s < count; s++) {
+    const k: LottieShapeKeyframe[] = track.keys.map((key, idx) => {
+      const shape = subpathToShape(subpathsPerKey[idx]![s]!);
+      const sVal: [LottieShapeValue] = [{ i: shape.i, o: shape.o, v: shape.v, c: shape.c }];
+      const t = key.t * fps;
+      const next = track.keys[idx + 1];
+      if (!next) return { t, s: sVal };
+      const nextShape = subpathToShape(subpathsPerKey[idx + 1]![s]!);
+      const eVal: [LottieShapeValue] = [{ i: nextShape.i, o: nextShape.o, v: nextShape.v, c: nextShape.c }];
+      const [x1, y1, x2, y2] = EASES[next.ease ?? 'linear'];
+      return { t, s: sVal, e: eVal, o: { x: [x1], y: [y1] }, i: { x: [x2], y: [y2] } };
+    });
+    items.push({ ty: 'sh', ks: { a: 1, k }, nm: `${part.name}-${s}` });
+  }
+  return items;
+}
+
+/** Crossfade weight of `expression` at time `t` for an incompatible (non-morphable) shape track, matching `sampleShape`. */
+function crossfadeWeight(track: Track<'shape'>, expression: string, t: number): number {
+  const { from, to, p } = locate(track.keys, t);
+  if (p === 0 || from.v === to.v) return from.v === expression ? 1 : 0;
+  let w = 0;
+  if (from.v === expression) w += 1 - p;
+  if (to.v === expression) w += p;
+  return w;
+}
+
+/** Exact bezier keyframes for one expression's crossfade weight, mirroring `export-svg`'s `keyStops`. */
+function crossfadeProp(track: Track<'shape'>, expression: string, fps: number): LottieProperty<number> {
+  if (track.keys.length < 2) return { a: 0, k: (track.keys[0]!.v === expression ? 1 : 0) * 100 };
+  const k: LottieKeyframe[] = track.keys.map((key, idx) => {
+    const t = key.t * fps;
+    const s = [(key.v === expression ? 1 : 0) * 100];
+    const next = track.keys[idx + 1];
+    if (!next) return { t, s };
+    const e = [(next.v === expression ? 1 : 0) * 100];
+    const [x1, y1, x2, y2] = EASES[next.ease ?? 'linear'];
+    return { t, s, e, o: { x: [x1], y: [y1] }, i: { x: [x2], y: [y2] } };
+  });
+  return { a: 1, k };
+}
+
+/**
+ * Baked (per-frame) crossfade weight combined with a part-level opacity track, for the rare case a
+ * shape track and an opacity track coexist on the same part: the product of two independently eased
+ * curves is not itself a single bezier, so this samples both every frame instead of deriving keys.
+ */
+function bakedCrossfadeProp(shapeTrack: Track<'shape'>, opacityTrack: Track<'opacity'>, expression: string, fps: number, duration: number): LottieProperty<number> {
+  const frames = Math.max(1, Math.round(duration * fps));
+  const k: LottieKeyframe[] = [];
+  for (let f = 0; f <= frames; f++) {
+    const t = (f / frames) * duration;
+    const w = crossfadeWeight(shapeTrack, expression, t) * sampleNumeric(opacityTrack, t);
+    k.push({ t: f, s: [w * 100] });
+  }
+  return { a: 1, k };
 }
 
 function readFill(hex: string): [number, number, number, number] {
@@ -193,36 +284,36 @@ function opacityProp(tracks: TracksByProperty, fps: number): LottieProperty<numb
   return animatedProp(track.keys, fps, (v) => [v * 100]);
 }
 
+function shapeGroup(part: RigPart, items: LottieShapePath[]): LottieShapeGroup {
+  return {
+    ty: 'gr',
+    nm: part.name,
+    it: [
+      ...items,
+      { ty: 'fl', c: { a: 0, k: readFill(part.fill) }, o: { a: 0, k: 100 }, nm: `${part.name}-fill` },
+      {
+        ty: 'tr',
+        p: { a: 0, k: [0, 0] },
+        a: { a: 0, k: [0, 0] },
+        s: { a: 0, k: [100, 100] },
+        r: { a: 0, k: 0 },
+        o: { a: 0, k: 100 },
+      },
+    ],
+  };
+}
+
 function partLayer(
-  rig: Rig,
   part: RigPart,
   ind: number,
-  indexByName: Map<string, number>,
+  parentInd: number | undefined,
   ip: number,
   op: number,
   tracks: TracksByProperty,
   fps: number,
+  shapes: LottieShapeGroup[],
+  opacity: LottieProperty<number>,
 ): LottieLayer {
-  const d = part.path;
-  const shapes: LottieShapeGroup[] = [];
-  if (d) {
-    shapes.push({
-      ty: 'gr',
-      nm: part.name,
-      it: [
-        ...pathToShapes(d, part.name),
-        { ty: 'fl', c: { a: 0, k: readFill(part.fill) }, o: { a: 0, k: 100 }, nm: `${part.name}-fill` },
-        {
-          ty: 'tr',
-          p: { a: 0, k: [0, 0] },
-          a: { a: 0, k: [0, 0] },
-          s: { a: 0, k: [100, 100] },
-          r: { a: 0, k: 0 },
-          o: { a: 0, k: 100 },
-        },
-      ],
-    });
-  }
   const layer: LottieLayer = {
     ddd: 0,
     ind,
@@ -234,7 +325,7 @@ function partLayer(
       p: positionProp(tracks, part.pivot, fps),
       s: scaleProp(tracks, fps),
       r: rotationProp(tracks, fps),
-      o: opacityProp(tracks, fps),
+      o: opacity,
     },
     ao: 0,
     shapes,
@@ -242,8 +333,51 @@ function partLayer(
     op,
     st: 0,
   };
-  if (part.parent !== undefined) layer.parent = indexByName.get(part.parent)!;
+  if (parentInd !== undefined) layer.parent = parentInd;
   return layer;
+}
+
+/**
+ * The layer(s) a part turns into. No shape track: the static path as before, one layer. A
+ * morphable shape track: still one layer, its path now animated. An incompatible shape track:
+ * one layer per expression it references, each a static path crossfaded in/out through opacity
+ * (mirrors `export-svg`'s per-expression `<path>` elements) — the first gets the part's own
+ * (primary) index so parenting is unaffected, the rest get indices from `nextIndex`.
+ */
+function partLayers(
+  rig: Rig,
+  part: RigPart,
+  primaryInd: number,
+  parentInd: number | undefined,
+  ip: number,
+  op: number,
+  tracks: TracksByProperty,
+  fps: number,
+  duration: number,
+  nextIndex: () => number,
+): LottieLayer[] {
+  const shapeTrack = tracks.shape;
+  if (!shapeTrack) {
+    const shapes = part.path ? [shapeGroup(part, pathToShapes(part.path, part.name))] : [];
+    return [partLayer(part, primaryInd, parentInd, ip, op, tracks, fps, shapes, opacityProp(tracks, fps))];
+  }
+  if (isMorphable(rig, part, shapeTrack)) {
+    const d0 = resolvePath(rig, part, shapeTrack.keys[0]!.v);
+    const shapes = d0 ? [shapeGroup(part, morphableShapeItems(rig, part, shapeTrack, fps))] : [];
+    return [partLayer(part, primaryInd, parentInd, ip, op, tracks, fps, shapes, opacityProp(tracks, fps))];
+  }
+  const expressions = [...new Set(shapeTrack.keys.map((k) => k.v))];
+  const layers: LottieLayer[] = [];
+  for (const [i, expr] of expressions.entries()) {
+    const d = resolvePath(rig, part, expr);
+    const shapes = d ? [shapeGroup(part, pathToShapes(d, `${part.name}-${expr}`))] : [];
+    const opacity = tracks.opacity
+      ? bakedCrossfadeProp(shapeTrack, tracks.opacity, expr, fps, duration)
+      : crossfadeProp(shapeTrack, expr, fps);
+    const ind = i === 0 ? primaryInd : nextIndex();
+    layers.push(partLayer(part, ind, parentInd, ip, op, tracks, fps, shapes, opacity));
+  }
+  return layers;
 }
 
 export function exportLottie(rig: Rig, clip: Clip): LottieJson {
@@ -252,11 +386,26 @@ export function exportLottie(rig: Rig, clip: Clip): LottieJson {
   // 1-based indices, assigned in rig draw order (bottom first) so `parent` can reference them
   // regardless of the rendering order the layers array ends up in.
   const indexByName = new Map<string, number>(rig.parts.map((p, i) => [p.name, i + 1]));
+  let extraIndex = rig.parts.length;
+  const nextIndex = () => ++extraIndex;
   const byPart = groupTracks(clip);
   // Lottie's layers array is front-to-back: the rig's bottom-first draw order must be reversed.
   const layers = [...rig.parts]
     .reverse()
-    .map((part) => partLayer(rig, part, indexByName.get(part.name)!, indexByName, ip, op, byPart.get(part.name) ?? {}, clip.fps));
+    .flatMap((part) =>
+      partLayers(
+        rig,
+        part,
+        indexByName.get(part.name)!,
+        part.parent !== undefined ? indexByName.get(part.parent) : undefined,
+        ip,
+        op,
+        byPart.get(part.name) ?? {},
+        clip.fps,
+        clip.duration,
+        nextIndex,
+      ),
+    );
   return {
     v: '5.13.0',
     fr: clip.fps,
