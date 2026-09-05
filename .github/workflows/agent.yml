@@ -1,4 +1,7 @@
 # .github/workflows/agent.yml
+# NOT YET EXERCISED against a remote: this repository has none, so the checkout,
+# the credentials, and the pull request step below are untested. Run it manually
+# once (max 1) before enabling the schedule, and expect to adjust it.
 name: agent
 on:
   workflow_dispatch:
@@ -11,6 +14,7 @@ on:
 jobs:
   backlog:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     permissions:
       contents: write
       pull-requests: write
@@ -21,10 +25,14 @@ jobs:
         with: { node-version: 26 }
       - run: npm ci
       - run: git config user.name "pubnyan-agent" && git config user.email "agent@users.noreply.github.com"
-      - run: npm run agent -- ${{ inputs.max || '1' }}
+      - run: npm run agent -- "${MAX:-1}"
         env:
+          MAX: ${{ inputs.max }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      # always(): an item that fails after the review rounds still leaves committed
+      # earlier items (and a branch worth looking at) behind.
       - uses: peter-evans/create-pull-request@v7
+        if: always()
         with:
           branch: agent/backlog
           title: "agent: backlog items"
