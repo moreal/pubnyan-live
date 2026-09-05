@@ -1,11 +1,11 @@
 'use agent';
-import { useModel, useSandbox, useTool } from '@flue/runtime';
+import { useSandbox, useTool } from '@flue/runtime';
 import { local } from '@flue/runtime/node';
 import { REPO_ROOT } from '../root.ts';
 import { runChecks } from '../tools/checks.ts';
 
+// Delegate: the model is set on its defineSubagent() entry in director.ts; useModel() is not allowed here.
 export function Reviewer() {
-  useModel('anthropic/claude-sonnet-5');
   useSandbox(local(), { cwd: REPO_ROOT });
   useTool(runChecks);
   return `You review ONE completed backlog item of pubnyan-live before it is committed. You are read-only: never edit files.

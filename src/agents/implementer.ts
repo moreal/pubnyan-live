@@ -1,5 +1,5 @@
 'use agent';
-import { useModel, useSandbox, useSkill, useTool } from '@flue/runtime';
+import { useSandbox, useSkill, useTool } from '@flue/runtime';
 import { local } from '@flue/runtime/node';
 import { REPO_ROOT } from '../root.ts';
 import clipDsl from '../skills/clip-dsl/SKILL.md';
@@ -7,8 +7,8 @@ import pubnyanMotion from '../skills/pubnyan-motion/SKILL.md';
 import rigReference from '../skills/rig-reference/SKILL.md';
 import { runChecks } from '../tools/checks.ts';
 
+// Delegate: the model is set on its defineSubagent() entry in director.ts; useModel() is not allowed here.
 export function Implementer() {
-  useModel('anthropic/claude-sonnet-5');
   useSandbox(local(), { cwd: REPO_ROOT });
   useSkill(rigReference);
   useSkill(clipDsl);
