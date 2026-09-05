@@ -16,6 +16,14 @@
       "fps": 30,
       "loop": true,
       "file": "idle.svg"
+    },
+    {
+      "name": "wink",
+      "rig": "pubnyan",
+      "duration": 1,
+      "fps": 30,
+      "loop": false,
+      "file": "wink.svg"
     }
   ]
 }

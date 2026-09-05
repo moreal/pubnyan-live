@@ -4,7 +4,7 @@ Work queue shared by humans and agents. Top item first. Mark `[x]` in the commit
 
 ## Smoke
 
-- [ ] **Smoke: wink clip.** Add `motion/clips/wink.clip.ts`: rig pubnyan, 1 s, non-loop; `eye-r.white` and `eye-r.pupil` scale from [1, 1] at 0 s to [1, 0.08] at 0.35 s (`easeIn`) and back to [1, 1] at 0.55 s (`easeOut`); nothing else moves. Register it in `motion/index.ts`. `npm run check` green; `dist/svg/wink.svg` committed.
+- [x] **Smoke: wink clip.** Add `motion/clips/wink.clip.ts`: rig pubnyan, 1 s, non-loop; `eye-r.white` and `eye-r.pupil` scale from [1, 1] at 0 s to [1, 0.08] at 0.35 s (`easeIn`) and back to [1, 1] at 0.55 s (`easeOut`); nothing else moves. Register it in `motion/index.ts`. `npm run check` green; `dist/svg/wink.svg` committed.
 
 ## Phase 4: Lottie
 
