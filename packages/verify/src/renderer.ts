@@ -36,6 +36,20 @@ export class Renderer {
     return this.renderHtml(svg, width, height, pauseAtMs);
   }
 
+  /**
+   * Loads `html` (expected to set `window.__done` to `true` once finished, and `window.__result`
+   * to a JSON-serializable value, or `window.__error` to a message on failure) and returns
+   * `__result`. For checks that need to run script in the page and read back data rather than a
+   * screenshot, e.g. asserting on a loaded dotLottie's manifest.
+   */
+  async evaluate<T>(html: string, timeoutMs = 20_000): Promise<T> {
+    await this.page.setContent(`<!doctype html><html><body style="margin:0;background:#fff">${html}</body></html>`);
+    await this.page.waitForFunction('window.__done === true || window.__error', { timeout: timeoutMs });
+    const error = await this.page.evaluate(() => (globalThis as unknown as { __error?: string }).__error);
+    if (error) throw new Error(`page evaluation failed: ${error}`);
+    return this.page.evaluate(() => (globalThis as unknown as { __result: unknown }).__result) as Promise<T>;
+  }
+
   /** Full-page screenshot, for contact sheets and montages. */
   async renderPage(html: string, width = 1400): Promise<Buffer> {
     await this.page.setViewport({ width, height: 800, deviceScaleFactor: 1 });
