@@ -2,6 +2,10 @@
 
 Work queue shared by humans and agents. Top item first. Mark `[x]` in the commit that completes an item. Every item ends with `npm run verify` green and a look at the contact sheet.
 
+## Smoke
+
+- [ ] **Smoke: wink clip.** Add `motion/clips/wink.clip.ts`: rig pubnyan, 1 s, non-loop; `eye-r.white` and `eye-r.pupil` scale from [1, 1] at 0 s to [1, 0.08] at 0.35 s (`easeIn`) and back to [1, 1] at 0.55 s (`easeOut`); nothing else moves. Register it in `motion/index.ts`. `npm run check` green; `dist/svg/wink.svg` committed.
+
 ## Phase 4: Lottie
 
 - [ ] **export-lottie: static frame.** `packages/export-lottie/src/index.ts` with `exportLottie(rig, clip): LottieJson`. One shape layer per part (parent via `parent` index), each with a single path shape (`ty: "sh"`) built from the rig path's cubic segments and a fill (`ty: "fl"`). Transform anchor = pivot. Register `lottieTarget` in `packages/verify/src/cli.ts`; its `renderFrame` loads lottie-web from `node_modules/lottie-web/build/player/lottie.min.js` into the page (inline the script text), calls `goToAndStop(t * 1000, false)`. Parity on `spinner` at t=0 passes.
