@@ -24,6 +24,38 @@
       "fps": 30,
       "loop": false,
       "file": "wink.svg"
+    },
+    {
+      "name": "expr-angry",
+      "rig": "pubnyan",
+      "duration": 0.1,
+      "fps": 30,
+      "loop": true,
+      "file": "expr-angry.svg"
+    },
+    {
+      "name": "expr-curious",
+      "rig": "pubnyan",
+      "duration": 0.1,
+      "fps": 30,
+      "loop": true,
+      "file": "expr-curious.svg"
+    },
+    {
+      "name": "expr-cry",
+      "rig": "pubnyan",
+      "duration": 0.1,
+      "fps": 30,
+      "loop": true,
+      "file": "expr-cry.svg"
+    },
+    {
+      "name": "expr-shy",
+      "rig": "pubnyan",
+      "duration": 0.1,
+      "fps": 30,
+      "loop": true,
+      "file": "expr-shy.svg"
     }
   ]
 }

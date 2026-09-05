@@ -1,0 +1,11 @@
+import { clip, key, track } from '#ir/clip.ts';
+
+/** Held angry expression: eyes, pupils, nose, and mouth switch to their angry shapes. */
+export default clip('expr-angry', { rig: 'pubnyan', duration: 0.1, fps: 30, loop: true }, [
+  track('eye-l.white', 'shape', [key(0, 'angry')]),
+  track('eye-r.white', 'shape', [key(0, 'angry')]),
+  track('eye-l.pupil', 'shape', [key(0, 'angry')]),
+  track('eye-r.pupil', 'shape', [key(0, 'angry')]),
+  track('nose', 'shape', [key(0, 'angry')]),
+  track('mouth', 'shape', [key(0, 'angry')]),
+]);
