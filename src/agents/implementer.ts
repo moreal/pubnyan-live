@@ -1,15 +1,12 @@
 'use agent';
-import { useSandbox, useSkill, useTool } from '@flue/runtime';
-import { local } from '@flue/runtime/node';
-import { REPO_ROOT } from '../root.ts';
+import { useSkill, useTool } from '@flue/runtime';
 import clipDsl from '../skills/clip-dsl/SKILL.md';
 import pubnyanMotion from '../skills/pubnyan-motion/SKILL.md';
 import rigReference from '../skills/rig-reference/SKILL.md';
 import { runChecks } from '../tools/checks.ts';
 
-// Delegate: the model is set on its defineSubagent() entry in director.ts; useModel() is not allowed here.
+// Delegate: rendered inside the Director's task. Model comes from its defineSubagent() entry in director.ts; the sandbox is inherited from the Director. Flue forbids useModel/useSandbox/usePersistentState/lifecycle hooks here.
 export function Implementer() {
-  useSandbox(local(), { cwd: REPO_ROOT });
   useSkill(rigReference);
   useSkill(clipDsl);
   useSkill(pubnyanMotion);
