@@ -1,4 +1,3 @@
-'use agent';
 import { useTool } from '@flue/runtime';
 import { runChecks } from '../tools/checks.ts';
 
