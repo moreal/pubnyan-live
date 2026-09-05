@@ -14,7 +14,7 @@
     "#rig/*": "./rig/*"
   },
   "scripts": {
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run",
     "check:types": "tsc --noEmit",
     "rig:extract": "node packages/rig-extract/src/cli.ts extract",
     "rig:inspect": "node packages/rig-extract/src/cli.ts inspect",

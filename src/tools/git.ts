@@ -2,6 +2,7 @@ import { defineTool } from '@flue/runtime';
 import type { JsonValue } from '@flue/runtime';
 import * as v from 'valibot';
 import { REPO_ROOT } from '../root.ts';
+import { summarizeCheckOutput } from './checks.ts';
 
 export const AGENT_BRANCH = 'agent/backlog';
 
@@ -19,12 +20,17 @@ export const gitCommit = defineTool({
     if (status.stdout.trim() === '') return { output: { ok: false, error: 'nothing to commit' } };
     const check = await sh('npm run check', 900_000);
     if (check.exitCode !== 0) {
-      return { output: { ok: false, error: `check suite failed (exit ${check.exitCode}); fix it before committing`, tail: check.stdout.split('\n').slice(-30) } };
+      return { output: { ok: false, error: `check suite failed (exit ${check.exitCode}); fix it before committing`, tail: summarizeCheckOutput(`${check.stdout}\n${check.stderr}`) } };
     }
     const current = (await sh('git branch --show-current')).stdout.trim();
     if (current !== AGENT_BRANCH) {
-      const co = await sh(`git checkout -B ${AGENT_BRANCH}`);
-      if (co.exitCode !== 0) return { output: { ok: false, error: co.stderr } };
+      // Never `checkout -B`: that would reset an existing agent/backlog to HEAD and orphan the
+      // commits already on it. A plain checkout carries the uncommitted work across.
+      const exists = (await sh(`git rev-parse --verify --quiet refs/heads/${AGENT_BRANCH}`)).exitCode === 0;
+      const co = await sh(exists ? `git checkout ${AGENT_BRANCH}` : `git checkout -b ${AGENT_BRANCH}`);
+      if (co.exitCode !== 0) {
+        return { output: { ok: false, error: `could not switch to ${AGENT_BRANCH}: ${co.stderr.trim() || co.stdout.trim()}` } };
+      }
     }
     await sh('git add -A');
     const commit = await sh(`git commit -q -m ${shellQuote(data.message)}`);
