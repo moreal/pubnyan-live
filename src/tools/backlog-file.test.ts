@@ -34,11 +34,15 @@ describe('backlog-file', () => {
     expect(countItems(md)).toEqual({ open: 3, done: 1 });
   });
 
-  test('markDone flips exactly that line and refuses other lines', () => {
+  test('markDone flips exactly that line and refuses non-item lines', () => {
     const next = markDone(md, 8);
     expect(next.split('\n')[7]).toBe('- [x] **export-lottie: static frame.** Build the first exporter. Parity on `spinner` passes.');
     expect(countItems(next)).toEqual({ open: 2, done: 2 });
-    expect(() => markDone(md, 7)).toThrow(/not an open backlog item/);
-    expect(() => markDone(md, 99)).toThrow(/not an open backlog item/);
+    expect(() => markDone(md, 99)).toThrow(/not a backlog item/);
+    expect(() => markDone(md, 1)).toThrow(/not a backlog item/);
+  });
+
+  test('markDone is idempotent: an already-done line is returned unchanged', () => {
+    expect(markDone(md, 7)).toBe(md);
   });
 });
