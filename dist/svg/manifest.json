@@ -8,6 +8,14 @@
       "fps": 30,
       "loop": true,
       "file": "spinner.svg"
+    },
+    {
+      "name": "idle",
+      "rig": "pubnyan",
+      "duration": 4,
+      "fps": 30,
+      "loop": true,
+      "file": "idle.svg"
     }
   ]
 }
