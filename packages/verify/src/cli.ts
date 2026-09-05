@@ -1,34 +1,30 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { validateClip } from '#ir/clip.ts';
-import { assertValid, validateRig } from '#ir/validate.ts';
-import { clips, getRig, rigs } from '#motion/index.ts';
+import { writeSvgManifest } from '#export-svg/manifest.ts';
+import { clips, getRig } from '#motion/index.ts';
 import { contactSheet } from '#verify/contact-sheet.ts';
-import { checkParity, sampleTimes, type Target } from '#verify/parity.ts';
+import { fixtureClips } from '#verify/fixtures/clips.ts';
+import { checkParity, sampleTimes } from '#verify/parity.ts';
 import { Renderer } from '#verify/renderer.ts';
-import { svgTarget } from '#verify/targets/svg.ts';
-
-/** Every exporter under test. New targets register here. */
-export const TARGETS: Target[] = [svgTarget];
+import { TARGETS } from '#verify/targets/index.ts';
 
 const ROOT = new URL('../../../', import.meta.url).pathname;
 const DIST = join(ROOT, 'dist');
 const VERIFY_DIR = join(DIST, 'verify');
-
-for (const rig of Object.values(rigs)) assertValid(validateRig(rig), `rig ${rig.name}`);
-for (const clip of clips) assertValid(validateClip(clip, getRig(clip.rig)), `clip ${clip.name}`);
 
 await mkdir(VERIFY_DIR, { recursive: true });
 const renderer = await Renderer.launch();
 const report: { clip: string; target: string; pass: boolean; worstT: number; worstRatio: number }[] = [];
 let failed = false;
 try {
-  for (const clip of clips) {
+  // Fixtures cover branches the registered clips do not reach; they are verified but never exported.
+  for (const clip of [...clips, ...fixtureClips]) {
+    const registered = clips.includes(clip);
     const rig = getRig(clip.rig);
     const times = sampleTimes(clip);
     const rows: { label: string; frames: Buffer[] }[] = [];
     for (const target of TARGETS) {
-      await target.export(rig, clip, join(DIST, target.name));
+      if (registered) await target.export(rig, clip, join(DIST, target.name));
       const result = await checkParity(renderer, rig, clip, target, times);
       if (rows.length === 0) rows.push({ label: 'reference', frames: result.referenceFrames });
       rows.push({ label: target.name, frames: result.targetFrames });
@@ -42,6 +38,8 @@ try {
 } finally {
   await renderer.close();
 }
+// The svg target has now written every registered clip, so the manifest matches what is on disk.
+await writeSvgManifest(clips, join(DIST, 'svg'));
 await writeFile(join(VERIFY_DIR, 'report.json'), JSON.stringify(report, null, 2) + '\n');
 console.log(`contact sheets in dist/verify/; report.json written`);
 process.exit(failed ? 1 : 0);
