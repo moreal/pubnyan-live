@@ -28,8 +28,16 @@ test('compareFrames rejects mismatched sizes', () => {
   expect(() => compareFrames(png(4, 4, () => 0), png(5, 4, () => 0))).toThrow(/size/);
 });
 
-test('sampleTimes spans the clip without the seam for loops, with the end for one-shots', () => {
-  const tracks = [track('a', 'opacity', [key(0, 1)])];
-  expect(sampleTimes(clip('l', { rig: 'r', duration: 2 }, tracks), 4)).toEqual([0, 0.5, 1, 1.5]);
-  expect(sampleTimes(clip('o', { rig: 'r', duration: 3, loop: false }, tracks), 4)).toEqual([0, 1, 2, 3]);
+test('sampleTimes hits every key time, the midpoints between them, and the loop seam', () => {
+  const tracks = [
+    track('a', 'opacity', [key(0, 1), key(1, 1)]),
+    track('b', 'rotation', [key(0, 0), key(0.5, 10), key(2, 0)]),
+  ];
+  expect(sampleTimes(clip('l', { rig: 'r', duration: 2 }, tracks))).toEqual([0, 0.25, 0.5, 0.75, 1, 1.5, 2]);
+  expect(sampleTimes(clip('o', { rig: 'r', duration: 2, loop: false }, tracks))).toEqual([0, 0.25, 0.5, 0.75, 1, 1.5, 2]);
+});
+
+test('sampleTimes rounds to 4 decimals and keeps duration even when no key lands on it', () => {
+  const c = clip('x', { rig: 'r', duration: 1, loop: false }, [track('a', 'opacity', [key(0, 1), key(1 / 3, 0)])]);
+  expect(sampleTimes(c)).toEqual([0, 0.1667, 0.3333, 0.6667, 1]);
 });
