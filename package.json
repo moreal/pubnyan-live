@@ -22,6 +22,7 @@
     "rig:inspect": "node packages/rig-extract/src/cli.ts inspect",
     "export:svg": "node packages/export-svg/src/cli.ts",
     "export:lottie": "node packages/export-lottie/src/cli.ts",
+    "export:rive": "node packages/export-rive/src/cli.ts",
     "verify": "node packages/verify/src/cli.ts",
     "check": "npm run check:types && npm test && npm run verify",
     "agent": "node scripts/agent-loop.mjs"

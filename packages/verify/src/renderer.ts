@@ -37,6 +37,21 @@ export class Renderer {
   }
 
   /**
+   * Like `renderHtml`, but for targets that draw asynchronously (e.g. a WASM runtime): waits for
+   * the page to set `window.__ready = true` (or `window.__error`) before screenshotting.
+   */
+  async renderHtmlWhenReady(html: string, width: number, height: number, timeoutMs = 20_000): Promise<Buffer> {
+    const w = Math.ceil(width);
+    const h = Math.ceil(height);
+    await this.page.setViewport({ width: w, height: h, deviceScaleFactor: 1 });
+    await this.page.setContent(`<!doctype html><html><body style="margin:0;background:#fff">${html}</body></html>`);
+    await this.page.waitForFunction('window.__ready === true || window.__error', { timeout: timeoutMs });
+    const error = await this.page.evaluate(() => (globalThis as unknown as { __error?: string }).__error);
+    if (error) throw new Error(`page render failed: ${error}`);
+    return Buffer.from(await this.page.screenshot({ type: 'png', clip: { x: 0, y: 0, width: w, height: h } }));
+  }
+
+  /**
    * Loads `html` (expected to set `window.__done` to `true` once finished, and `window.__result`
    * to a JSON-serializable value, or `window.__error` to a message on failure) and returns
    * `__result`. For checks that need to run script in the page and read back data rather than a
