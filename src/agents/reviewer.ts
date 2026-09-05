@@ -1,12 +1,9 @@
 'use agent';
-import { useSandbox, useTool } from '@flue/runtime';
-import { local } from '@flue/runtime/node';
-import { REPO_ROOT } from '../root.ts';
+import { useTool } from '@flue/runtime';
 import { runChecks } from '../tools/checks.ts';
 
-// Delegate: the model is set on its defineSubagent() entry in director.ts; useModel() is not allowed here.
+// Delegate: rendered inside the Director's task. Model comes from its defineSubagent() entry in director.ts; the sandbox is inherited from the Director. Flue forbids useModel/useSandbox/usePersistentState/lifecycle hooks here.
 export function Reviewer() {
-  useSandbox(local(), { cwd: REPO_ROOT });
   useTool(runChecks);
   return `You review ONE completed backlog item of pubnyan-live before it is committed. You are read-only: never edit files.
 
