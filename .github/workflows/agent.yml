@@ -1,7 +1,13 @@
 # .github/workflows/agent.yml
-# NOT YET EXERCISED against a remote: this repository has none, so the checkout,
-# the credentials, and the pull request step below are untested. Run it manually
-# once (max 1) before enabling the schedule, and expect to adjust it.
+# NOT YET DISPATCHED: a remote (github.com/moreal/pubnyan-live) exists now, but
+# nobody has run `workflow_dispatch` with max=1 against it yet, and the repo has
+# no ANTHROPIC_API_KEY secret configured, so `npm run agent` would fail before
+# reaching the push step below. Someone with push access needs to:
+#   1. add the ANTHROPIC_API_KEY secret (or an equivalent OAuth token) to the repo,
+#   2. push `main` (the repo is currently empty on the remote),
+#   3. dispatch this workflow once with max=1 and read the PR it opens.
+# See docs/backlog.md ("Exercise .github/workflows/agent.yml") for the
+# git-push-vs-create-pull-request decision recorded below.
 name: agent
 on:
   workflow_dispatch:
@@ -31,10 +37,21 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       # always(): an item that fails after the review rounds still leaves committed
       # earlier items (and a branch worth looking at) behind.
-      - uses: peter-evans/create-pull-request@v7
-        if: always()
-        with:
-          branch: agent/backlog
-          title: "agent: backlog items"
-          body: "Completed by the Flue director loop. Review dist/verify contact sheets locally with `npm run verify`."
-          base: main
+      #
+      # Plain push + `gh pr create` instead of peter-evans/create-pull-request: the
+      # loop's git_commit tool already commits each item directly onto agent/backlog
+      # inside this checkout, so by the time this step runs the working tree is
+      # clean and there is no uncommitted diff for create-pull-request to pick up
+      # (it only opens/updates a PR from a diff it commits itself). Pushing the
+      # branch that already exists and opening a PR if one isn't open yet is the
+      # simpler, correct mirror of what the loop already did locally.
+      - if: always()
+        run: |
+          git push origin agent/backlog
+          if ! gh pr view agent/backlog --json url >/dev/null 2>&1; then
+            gh pr create --head agent/backlog --base main \
+              --title "agent: backlog items" \
+              --body "Completed by the Flue director loop. Review dist/verify contact sheets locally with \`npm run verify\`."
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
