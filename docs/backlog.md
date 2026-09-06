@@ -38,7 +38,7 @@ Work queue shared by humans and agents. Top item first. Mark `[x]` in the commit
 
 Deferred cleanups found in the foundation and agent-loop reviews. None blocks a phase; take them when touching the area.
 
-- [ ] **svgTarget renders the exported file.** `svgTarget.renderFrame` re-runs `exportSvg` in memory, so parity never tests the bytes in `dist/svg`. Load the written file instead.
+- [x] **svgTarget renders the exported file.** `svgTarget.renderFrame` re-runs `exportSvg` in memory, so parity never tests the bytes in `dist/svg`. Load the written file instead.
 - [ ] **Move `Renderer` out of `packages/verify`.** `rig-extract` imports the test harness to render previews. Put `Renderer` in a shared package both can depend on.
 - [ ] **`readFill` accepts only 6-digit hex.** In `svg-source.ts` anything else (3-digit hex, `rgb()`, named colours) silently falls back to black; parse them or fail loudly.
 - [ ] **`svg-source` drops `Q` quadratics.** Lower them to cubics, or fail with a message naming the offending command and path id.
