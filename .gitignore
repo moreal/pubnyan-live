@@ -6,3 +6,4 @@ rig/inspect/
 .env
 .superpowers/
 .worktrees/
+.agent-loop.lock
