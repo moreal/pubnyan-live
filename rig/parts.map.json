@@ -1,10 +1,12 @@
 {
   "source": "vendor/visual-identity/exports",
+  "overrides": "rig/overrides",
   "rigs": {
     "pubnyan": {
       "artboard": { "width": 374, "height": 319 },
       "default": "normal",
       "align": { "part": "nose" },
+      "overridesFile": "pubnyan-eyes-mouth.svg",
       "parts": [
         { "name": "body", "fill": "#000000", "pivot": [187, 314] },
         { "name": "face", "fill": "#ffffff", "parent": "body" },
@@ -28,6 +30,10 @@
             "ring-gap-l": "path15", "ring-gap-r": "path13",
             "eye-l.pupil": "path21", "eye-r.pupil": "path19",
             "nose": "path23", "mouth": "path25"
+          },
+          "overrides": {
+            "eye-l.white": "eye-l-normal", "eye-r.white": "eye-r-normal",
+            "mouth": "mouth-normal"
           }
         },
         "angry": {
@@ -37,6 +43,10 @@
             "eye-l.white": "path47#outer", "eye-r.white": "path43#outer",
             "eye-l.pupil": null, "eye-r.pupil": null,
             "mouth": "path57"
+          },
+          "overrides": {
+            "eye-l.white": "eye-l-angry", "eye-r.white": "eye-r-angry",
+            "mouth": "mouth-angry"
           }
         },
         "curious": {
@@ -46,6 +56,10 @@
             "eye-l.white": "path27#outer", "eye-r.white": "path29#outer",
             "eye-l.pupil": null, "eye-r.pupil": null,
             "mouth": "path41"
+          },
+          "overrides": {
+            "eye-l.white": "eye-l-curious", "eye-r.white": "eye-r-curious",
+            "mouth": "mouth-curious"
           }
         },
         "cry": {
@@ -65,6 +79,10 @@
             "eye-l.white": "path85#outer", "eye-r.white": "path83#outer",
             "eye-l.pupil": null, "eye-r.pupil": null,
             "mouth": "path111"
+          },
+          "overrides": {
+            "eye-l.white": "eye-l-shy", "eye-r.white": "eye-r-shy",
+            "mouth": "mouth-shy"
           }
         }
       }

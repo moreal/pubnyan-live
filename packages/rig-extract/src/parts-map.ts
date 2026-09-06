@@ -17,6 +17,13 @@ export interface PartsMapExpression {
    * expression); an explicit `null` hides the part in this expression.
    */
   map: Record<string, string | string[] | null>;
+  /**
+   * part name -> selector(s) into the rig's `overridesFile`, resolved against the top-level
+   * `overrides` source. Wins over `map` and is applied after alignment, so overrides are authored
+   * directly in the rig's final coordinate space. Hand-redrawn paths sharing a command sequence
+   * across expressions morph instead of crossfading (see `interpolatePath`).
+   */
+  overrides?: Record<string, string | string[]>;
 }
 
 export interface PartsMapRig {
@@ -30,10 +37,14 @@ export interface PartsMapRig {
   align?: { part: string };
   parts: PartsMapPart[];
   expressions: Record<string, PartsMapExpression>;
+  /** File name inside the top-level `overrides` source, referenced by expressions' `overrides` maps. */
+  overridesFile?: string;
 }
 
 export interface PartsMap {
   source: string;
+  /** Directory holding hand-redrawn override SVGs referenced by rigs' `overridesFile`. */
+  overrides?: string;
   rigs: Record<string, PartsMapRig>;
 }
 
