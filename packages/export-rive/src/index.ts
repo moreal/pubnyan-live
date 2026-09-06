@@ -61,6 +61,7 @@ const KEYED_OBJECT_ID = KEYS.KeyedObject!.properties.objectId!.key;
 const KEYED_PROPERTY_KEY = KEYS.KeyedProperty!.properties.propertyKey!.key;
 const KEY_FRAME_FRAME = KEYS.KeyFrame!.properties.frame!.key;
 const KEY_FRAME_INTERPOLATION_TYPE = KEYS.InterpolatingKeyFrame!.properties.interpolationType!.key;
+const KEY_FRAME_INTERPOLATOR_ID = KEYS.InterpolatingKeyFrame!.properties.interpolatorId!.key;
 const KEY_FRAME_VALUE = KEYS.KeyFrameDouble!.properties.value!.key;
 // `CubicEaseInterpolator` (a concrete, no-extra-fields subclass of `CubicInterpolator`, see
 // cubic_ease_interpolator_base.hpp in the pinned runtime) inherits x1/y1/x2/y2 rather than
@@ -72,12 +73,18 @@ const CUBIC_Y1 = KEYS.CubicInterpolator!.properties.y1!.key;
 const CUBIC_X2 = KEYS.CubicInterpolator!.properties.x2!.key;
 const CUBIC_Y2 = KEYS.CubicInterpolator!.properties.y2!.key;
 /** `InterpolatingKeyFrame::interpolationType() == 0` means "hold" (`keyed_property.cpp`); any
- * other value selects `applyInterpolation`. The importer (not an `interpolatorId` property) wires
- * up which interpolator that is: a `CubicInterpolator`-family object read immediately after an
- * `InterpolatingKeyFrame` is adopted as that keyframe's own interpolator (`KeyFrameImporter`,
- * confirmed against the real runtime — a `CubicEaseInterpolator` written before its keyframe
- * instead pops the still-open `KeyedProperty`/`KeyedObject` import-stack contexts, silently
- * orphaning every `KeyFrame` written after it: the property parses but never applies). */
+ * other value selects `applyInterpolation`, which only actually eases if
+ * `effectiveInterpolator()` resolves to a real `KeyFrameInterpolator` — that resolution goes
+ * through the `interpolatorId` property (`InterpolatingKeyFrameBase::onAddedDirty` calls
+ * `context->resolve(interpolatorId())`), not adjacency in the object stream: a `CubicInterpolator`
+ * is imported as an ordinary artboard component (`KeyFrameInterpolator::import`), so a keyframe
+ * that omits `interpolatorId` silently falls back to linear interpolation even though the
+ * `CubicEaseInterpolator` object is right there in the file (confirmed against the real runtime:
+ * eases whose midpoint happens to coincide with the linear midpoint, e.g. `inOutSine`'s symmetric
+ * control points, still matched the reference by coincidence). `interpolatorId` is artboard-
+ * relative like `parentId`; the interpolator is always written immediately after its keyframe, so
+ * its index is `cursor + 2` (this keyframe's own index `cursor + 1`, plus one) at the point the
+ * keyframe's properties are assembled. */
 const INTERPOLATION_TYPE_CUBIC = 1;
 
 export interface RiveSpike {
@@ -223,8 +230,17 @@ export function exportRive(rig: Rig, clip: Clip): Buffer {
 
   const partByName = new Map(rig.parts.map((p) => [p.name, p]));
   const nodeIndexByPart = new Map<string, number>();
-  // Object indices are relative to the artboard, which is implicitly index 0 (see the spike in
-  // this file's git history / `writer.ts`'s doc comment).
+  // `cursor` tracks the artboard's own `m_Objects` index (what `parentId` and `interpolatorId`
+  // resolve against), NOT a raw count of every `w.object()` call: `ArtboardImporter::addComponent`
+  // (`Node`, `Shape`, `Fill`, `SolidColor`, `PointsPath`, `CubicDetachedVertex`,
+  // `CubicEaseInterpolator` — anything a `KeyFrameInterpolator::import` or ordinary `Component`
+  // import registers) is what actually appends to that array; `LinearAnimation`, `KeyedObject`,
+  // `KeyedProperty`, and `KeyFrame` import through their OWN owner (`addAnimation`,
+  // `addKeyedObject`, `addKeyedProperty`, `addKeyFrame` respectively, confirmed against the real
+  // runtime's importers) and never occupy an `m_Objects` slot at all. `add()` below is only for
+  // the former group; the latter group is written with the writer's raw `w.object()` and must
+  // never receive an id computed from `cursor` for ITSELF (referencing another `add()`-tracked
+  // object, e.g. a `KeyedObject`'s `objectId` pointing at a `Node`, is fine).
   let cursor = 0;
   const add = (typeKey: number, properties: [number, number | string][]): number => {
     w.object(typeKey, properties);
@@ -298,17 +314,26 @@ export function exportRive(rig: Rig, clip: Clip): Buffer {
   const toFrame = (t: number) => Math.round(t * animFps);
 
   /** One `CubicEaseInterpolator` per eased segment, then a `KeyFrameDouble` per key referencing
-   * it via `interpolatorId` (the last key has neither: nothing follows it). */
+   * it via `interpolatorId` (the last key has neither: nothing follows it). `KeyedProperty` and
+   * `KeyFrameDouble` are written with the writer's raw `w.object()`, not `add()`: they import
+   * through their owning `KeyedObject`/`KeyedProperty` (see the `cursor` doc comment above) and
+   * never occupy an `m_Objects` slot, so they must not advance `cursor` — only the
+   * `CubicEaseInterpolator` that follows a keyframe does. */
   const writeDoubleTrack = (propertyKey: number, values: FrameValue[]): void => {
-    add(KEYED_PROPERTY, [[KEYED_PROPERTY_KEY, propertyKey]]);
+    w.object(KEYED_PROPERTY, [[KEYED_PROPERTY_KEY, propertyKey]]);
     for (const [i, v] of values.entries()) {
       const next = values[i + 1];
       const props: [number, number | string][] = [
         [KEY_FRAME_FRAME, v.frame],
         [KEY_FRAME_VALUE, v.value],
       ];
-      if (next) props.push([KEY_FRAME_INTERPOLATION_TYPE, INTERPOLATION_TYPE_CUBIC]);
-      add(KEY_FRAME_DOUBLE, props);
+      if (next) {
+        props.push([KEY_FRAME_INTERPOLATION_TYPE, INTERPOLATION_TYPE_CUBIC]);
+        // The interpolator is written by the very next `add()` call below: it will become
+        // `cursor + 1`, the first (and only) `m_Objects` slot consumed since this keyframe.
+        props.push([KEY_FRAME_INTERPOLATOR_ID, cursor + 1]);
+      }
+      w.object(KEY_FRAME_DOUBLE, props);
       if (next) {
         const [x1, y1, x2, y2] = EASES[next.ease ?? 'linear'];
         add(CUBIC_EASE_INTERPOLATOR, [
@@ -322,7 +347,7 @@ export function exportRive(rig: Rig, clip: Clip): Buffer {
   };
 
   const duration = Math.max(1, Math.round(clip.duration * animFps));
-  add(LINEAR_ANIMATION, [
+  w.object(LINEAR_ANIMATION, [
     [ANIMATION_NAME, clip.name],
     [ANIM_FPS, animFps],
     [ANIM_DURATION, duration],
@@ -338,7 +363,7 @@ export function exportRive(rig: Rig, clip: Clip): Buffer {
     // spatial parent of this one, so those three cascade down exactly like `ir/matrix.ts`'s
     // nested `localMatrix` multiplication (Rive computes child world transforms the same way).
     if (tracks.position || tracks.rotation || tracks.scale) {
-      add(KEYED_OBJECT, [[KEYED_OBJECT_ID, nodeIndex]]);
+      w.object(KEYED_OBJECT, [[KEYED_OBJECT_ID, nodeIndex]]);
       if (tracks.position) {
         const dx = part.pivot[0] - parentPivot[0];
         const dy = part.pivot[1] - parentPivot[1];
@@ -365,7 +390,7 @@ export function exportRive(rig: Rig, clip: Clip): Buffer {
     if (tracks.opacity) {
       const shapeIndex = shapeIndexByPart.get(part.name);
       if (shapeIndex !== undefined) {
-        add(KEYED_OBJECT, [[KEYED_OBJECT_ID, shapeIndex]]);
+        w.object(KEYED_OBJECT, [[KEYED_OBJECT_ID, shapeIndex]]);
         writeDoubleTrack(NODE_OPACITY, tracks.opacity.keys.map((k) => ({ frame: toFrame(k.t), value: k.v, ease: k.ease })));
       }
     }
