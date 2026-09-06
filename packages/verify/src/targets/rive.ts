@@ -8,11 +8,6 @@ const RIVE_CANVAS_WASM = new URL('../../../../node_modules/@rive-app/canvas/rive
 
 export const riveTarget: Target = {
   name: 'rive',
-  // Transform tracks (position/rotation/scale/opacity) are keyframed as a `LinearAnimation`
-  // (backlog "linear animations"), so any clip built only from those matches at every sampled
-  // time. Shape tracks are not yet keyframed (backlog "shape keyframes"): a clip that animates one
-  // only matches at t=0, where the exporter already bakes in the first key's expression.
-  supportsTime: (clip, t) => t === 0 || !clip.tracks.some((track) => track.property === 'shape'),
   async export(rig, clip, outDir) {
     await mkdir(outDir, { recursive: true });
     const file = join(outDir, `${clip.name}.riv`);
