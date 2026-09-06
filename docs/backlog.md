@@ -40,7 +40,7 @@ Deferred cleanups found in the foundation and agent-loop reviews. None blocks a 
 
 - [x] **svgTarget renders the exported file.** `svgTarget.renderFrame` re-runs `exportSvg` in memory, so parity never tests the bytes in `dist/svg`. Load the written file instead.
 - [x] **Move `Renderer` out of `packages/verify`.** `rig-extract` imports the test harness to render previews. Put `Renderer` in a shared package both can depend on.
-- [ ] **`readFill` accepts only 6-digit hex.** In `svg-source.ts` anything else (3-digit hex, `rgb()`, named colours) silently falls back to black; parse them or fail loudly.
+- [x] **`readFill` accepts only 6-digit hex.** In `svg-source.ts` anything else (3-digit hex, `rgb()`, named colours) silently falls back to black; parse them or fail loudly.
 - [ ] **`svg-source` drops `Q` quadratics.** Lower them to cubics, or fail with a message naming the offending command and path id.
 - [ ] **`isPathData` is a whitelist, not a grammar.** It accepts malformed data such as a lone `M` with no coordinates. Parse with `parsePath` instead.
 - [ ] **`REST` vectors in `sample.ts` are shared instances.** `REST.position` and `REST.scale` are handed straight to callers; a mutating consumer would corrupt every future sample. Freeze them or return copies.
