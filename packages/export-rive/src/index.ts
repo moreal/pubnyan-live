@@ -6,15 +6,15 @@
  * (0, 0)) and the path's vertices are offset by `-pivot`, so rotating/scaling the Node later
  * (backlog: "linear animations") pivots the shape exactly like `ir/matrix.ts`'s `localMatrix`.
  *
- * No transform or shape keyframing is baked in yet (backlog: "linear animations", "shape
- * keyframes"): parts always sit at their rig rest transform, but a shape track's first key (this
- * part's expression at t=0) is still resolved, so the file matches the reference sampler's t=0
- * frame for clips that hold an expression from the start (e.g. `expr-angry`).
+ * Transform tracks (backlog: "linear animations") key the part's Node; shape tracks (backlog:
+ * "shape keyframes") key either the rest Shape's `CubicDetachedVertex` objects directly (a
+ * morphable track, same command sequence at every key) or, when the expressions are incompatible,
+ * crossfade between one static Shape per distinct expression via keyed opacity on each.
  */
 import { EASES } from '#ir/easing.ts';
-import { parsePath, type Segment } from '#ir/path.ts';
-import { groupTracks, resolvePath, type TracksByProperty } from '#ir/sample.ts';
-import type { Clip, EaseName, Rig, RigPart, Vec2 } from '#ir/types.ts';
+import { interpolatePath, parsePath, type Segment } from '#ir/path.ts';
+import { groupTracks, locate, resolvePath, sampleNumeric, type TracksByProperty } from '#ir/sample.ts';
+import type { Clip, EaseName, Rig, RigPart, Track, Vec2 } from '#ir/types.ts';
 import { KEYS } from '#export-rive/keys.generated.ts';
 import { RivWriter } from '#export-rive/writer.ts';
 
@@ -268,40 +268,91 @@ export function exportRive(rig: Rig, clip: Clip): Buffer {
     nodeIndexByPart.set(part.name, nodeIndex);
   }
 
-  const shapeIndexByPart = new Map<string, number>();
-  for (const part of [...rig.parts].reverse()) {
-    // A shape track's first key is this part's rest expression (mirrors the reference sampler's
-    // t=0, since `locate()` holds at the first key for any t at or before it); no shape track
-    // keyframing is baked in yet (backlog: "shape keyframes"), only this initial pose.
-    const shapeTrack = byPart.get(part.name)?.shape;
-    const path = shapeTrack ? resolvePath(rig, part, shapeTrack.keys[0]!.v) : part.path;
-    if (!path) continue; // hidden by default (e.g. tears): no geometry to emit at rest.
-    const nodeIndex = nodeIndexByPart.get(part.name)!;
+  /** Writes one `Shape > (PointsPath, ...) + Fill > SolidColor` under `nodeIndex` for `path`, and
+   * returns the shape's own index plus, per subpath, the `CubicDetachedVertex` object indices in
+   * `subpathToVertices`' order (so a morphable shape track can key them afterward). */
+  const writeShapeGeometry = (nodeIndex: number, part: RigPart, path: string, namePrefix: string): { shapeIndex: number; vertexIndicesPerSubpath: number[][] } => {
     const shapeIndex = add(SHAPE, [[PARENT_ID, nodeIndex]]);
-    shapeIndexByPart.set(part.name, shapeIndex);
+    const vertexIndicesPerSubpath: number[][] = [];
     for (const [i, sub] of splitSubpaths(path).entries()) {
       const pathIndex = add(POINTS_PATH, [
         [PARENT_ID, shapeIndex],
-        [NAME, `${part.name}-${i}`],
+        [NAME, `${namePrefix}-${i}`],
         [IS_CLOSED, 1],
       ]);
+      const indices: number[] = [];
       for (const v of subpathToVertices(sub, part.pivot)) {
-        add(CUBIC_DETACHED_VERTEX, [
-          [PARENT_ID, pathIndex],
-          [VERTEX_X, v.x],
-          [VERTEX_Y, v.y],
-          [IN_ROTATION, v.inRotation],
-          [IN_DISTANCE, v.inDistance],
-          [OUT_ROTATION, v.outRotation],
-          [OUT_DISTANCE, v.outDistance],
-        ]);
+        indices.push(
+          add(CUBIC_DETACHED_VERTEX, [
+            [PARENT_ID, pathIndex],
+            [VERTEX_X, v.x],
+            [VERTEX_Y, v.y],
+            [IN_ROTATION, v.inRotation],
+            [IN_DISTANCE, v.inDistance],
+            [OUT_ROTATION, v.outRotation],
+            [OUT_DISTANCE, v.outDistance],
+          ]),
+        );
       }
+      vertexIndicesPerSubpath.push(indices);
     }
     const fillIndex = add(FILL, [[PARENT_ID, shapeIndex]]);
     add(SOLID_COLOR, [
       [PARENT_ID, fillIndex],
       [COLOR_VALUE, part.fill],
     ]);
+    return { shapeIndex, vertexIndicesPerSubpath };
+  };
+
+  /** Whether every consecutive pair of expressions a shape track resolves to morphs (same command sequence). */
+  const isMorphable = (part: RigPart, track: Track<'shape'>): boolean => {
+    const paths = track.keys.map((k) => resolvePath(rig, part, k.v));
+    return paths.every((d, i) => i === 0 || (d !== null && paths[i - 1] !== null && interpolatePath(paths[i - 1]!, d, 0) !== null));
+  };
+
+  interface MorphInfo {
+    track: Track<'shape'>;
+    vertexIndicesPerSubpath: number[][];
+  }
+  interface CrossfadeInfo {
+    track: Track<'shape'>;
+    shapeIndexByExpr: Map<string, number>;
+  }
+  const shapeIndexByPart = new Map<string, number>();
+  const morphByPart = new Map<string, MorphInfo>();
+  const crossfadeByPart = new Map<string, CrossfadeInfo>();
+  for (const part of [...rig.parts].reverse()) {
+    const nodeIndex = nodeIndexByPart.get(part.name)!;
+    const shapeTrack = byPart.get(part.name)?.shape;
+    if (!shapeTrack) {
+      if (!part.path) continue; // hidden by default (e.g. tears): no geometry to emit at rest.
+      const { shapeIndex } = writeShapeGeometry(nodeIndex, part, part.path, part.name);
+      shapeIndexByPart.set(part.name, shapeIndex);
+      continue;
+    }
+    if (isMorphable(part, shapeTrack)) {
+      // A morphable track's rest pose is its first key (mirrors the reference sampler's t=0,
+      // since `locate()` holds at the first key for any t at or before it); the vertices keyed
+      // below (backlog: "shape keyframes") animate them across the rest of the clip.
+      const path0 = resolvePath(rig, part, shapeTrack.keys[0]!.v);
+      if (!path0) continue;
+      const { shapeIndex, vertexIndicesPerSubpath } = writeShapeGeometry(nodeIndex, part, path0, part.name);
+      shapeIndexByPart.set(part.name, shapeIndex);
+      morphByPart.set(part.name, { track: shapeTrack, vertexIndicesPerSubpath });
+      continue;
+    }
+    // Incompatible (crossfading) shapes: one static Shape per distinct expression the track
+    // references, all parented to the same Node, opacity-keyed against each other below (mirrors
+    // `export-svg`'s per-expression `<path>` elements / `export-lottie`'s per-expression layers).
+    const expressions = [...new Set(shapeTrack.keys.map((k) => k.v))];
+    const shapeIndexByExpr = new Map<string, number>();
+    for (const expr of expressions) {
+      const d = resolvePath(rig, part, expr);
+      if (!d) continue;
+      const { shapeIndex } = writeShapeGeometry(nodeIndex, part, d, `${part.name}-${expr}`);
+      shapeIndexByExpr.set(expr, shapeIndex);
+    }
+    if (shapeIndexByExpr.size > 0) crossfadeByPart.set(part.name, { track: shapeTrack, shapeIndexByExpr });
   }
 
   // `KeyFrame.frame` is a uint, so every keyed time must land on an exact integer frame at
@@ -392,6 +443,89 @@ export function exportRive(rig: Rig, clip: Clip): Buffer {
       if (shapeIndex !== undefined) {
         w.object(KEYED_OBJECT, [[KEYED_OBJECT_ID, shapeIndex]]);
         writeDoubleTrack(NODE_OPACITY, tracks.opacity.keys.map((k) => ({ frame: toFrame(k.t), value: k.v, ease: k.ease })));
+      }
+    }
+  }
+
+  // Keeps a rotation/distance track from swinging the long way around when a morph's tangent
+  // direction crosses the -pi/pi seam between two keys (atan2's range), by re-expressing each
+  // later value as the equivalent angle closest to the one before it.
+  const unwrapAngles = (values: number[]): number[] => {
+    const out: number[] = [values[0]!];
+    for (let i = 1; i < values.length; i++) {
+      let v = values[i]!;
+      const prev = out[i - 1]!;
+      while (v - prev > Math.PI) v -= 2 * Math.PI;
+      while (v - prev < -Math.PI) v += 2 * Math.PI;
+      out.push(v);
+    }
+    return out;
+  };
+
+  // Shape morph (backlog: "shape keyframes"): key every `CubicDetachedVertex`'s x/y and in/out
+  // rotation/distance across the track's key times. The vertex position (x, y) matches the
+  // reference sampler's linear interpolation of the raw path numbers exactly; the tangent handles
+  // are Rive's native polar form (rotation/distance) rather than the sampler's cartesian one, so a
+  // handle that both rotates and changes length between two keys interpolates along a very close
+  // but not bit-identical arc — acceptable for the small, calm expression changes this rig has.
+  for (const [partName, morph] of morphByPart) {
+    const part = partByName.get(partName)!;
+    const paths = morph.track.keys.map((k) => resolvePath(rig, part, k.v)!);
+    const vertsPerKeyPerSubpath = paths.map((p) => splitSubpaths(p).map((sub) => subpathToVertices(sub, part.pivot)));
+    for (const [s, vertexIndices] of morph.vertexIndicesPerSubpath.entries()) {
+      for (const [j, vertexIndex] of vertexIndices.entries()) {
+        const at = (pick: (v: VertexData) => number) => vertsPerKeyPerSubpath.map((subpaths) => pick(subpaths[s]![j]!));
+        const xs = at((v) => v.x);
+        const ys = at((v) => v.y);
+        const inRot = unwrapAngles(at((v) => v.inRotation));
+        const inDist = at((v) => v.inDistance);
+        const outRot = unwrapAngles(at((v) => v.outRotation));
+        const outDist = at((v) => v.outDistance);
+        const values = (arr: number[]): FrameValue[] => morph.track.keys.map((k, i) => ({ frame: toFrame(k.t), value: arr[i]!, ease: k.ease }));
+        w.object(KEYED_OBJECT, [[KEYED_OBJECT_ID, vertexIndex]]);
+        writeDoubleTrack(VERTEX_X, values(xs));
+        writeDoubleTrack(VERTEX_Y, values(ys));
+        writeDoubleTrack(IN_ROTATION, values(inRot));
+        writeDoubleTrack(IN_DISTANCE, values(inDist));
+        writeDoubleTrack(OUT_ROTATION, values(outRot));
+        writeDoubleTrack(OUT_DISTANCE, values(outDist));
+      }
+    }
+  }
+
+  // Shape crossfade (backlog: "shape keyframes"): opacity-key each expression's own Shape so
+  // exactly the resolved one is visible, matching `ir/sample.ts`'s `sampleShape` crossfade weights
+  // exactly at every key (and, since both sides share the same ease, at every time between two
+  // keys too — mirrors `export-svg`'s per-expression opacity keyframes / `export-lottie`'s
+  // `crossfadeProp`).
+  for (const [partName, info] of crossfadeByPart) {
+    const opacityTrack = (byPart.get(partName) ?? {}).opacity;
+    for (const [expr, shapeIndex] of info.shapeIndexByExpr) {
+      w.object(KEYED_OBJECT, [[KEYED_OBJECT_ID, shapeIndex]]);
+      if (opacityTrack) {
+        // A shape crossfade and a part-level opacity track combine multiplicatively, and the
+        // product of two independently eased curves isn't itself a single bezier, so this bakes
+        // one linear keyframe per frame instead of deriving bezier keys (mirrors
+        // `export-lottie`'s `bakedCrossfadeProp`).
+        const frames = Math.max(1, Math.round(clip.duration * clip.fps));
+        const values: FrameValue[] = [];
+        for (let f = 0; f <= frames; f++) {
+          const t = (f / frames) * clip.duration;
+          const { from, to, p } = locate(info.track.keys, t);
+          let weight = from.v === expr ? 1 : 0;
+          if (p !== 0 && from.v !== to.v) {
+            weight = 0;
+            if (from.v === expr) weight += 1 - p;
+            if (to.v === expr) weight += p;
+          }
+          values.push({ frame: toFrame(t), value: weight * sampleNumeric(opacityTrack, t) });
+        }
+        writeDoubleTrack(NODE_OPACITY, values);
+      } else {
+        writeDoubleTrack(
+          NODE_OPACITY,
+          info.track.keys.map((k) => ({ frame: toFrame(k.t), value: k.v === expr ? 1 : 0, ease: k.ease })),
+        );
       }
     }
   }
