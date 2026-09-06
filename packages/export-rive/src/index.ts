@@ -130,7 +130,7 @@ export function exportRiveSpike(spike: RiveSpike): Buffer {
 const EPSILON = 0.01;
 const close = (a: Vec2, b: Vec2) => Math.abs(a[0] - b[0]) < EPSILON && Math.abs(a[1] - b[1]) < EPSILON;
 
-interface VertexData {
+export interface VertexData {
   x: number;
   y: number;
   inRotation: number;
@@ -144,7 +144,7 @@ interface VertexData {
  * points converted to CubicDetachedVertex's polar form: `point + distance * (cos r, sin r)`.
  * Coordinates are relative to `pivot` (the Node the Path's Shape is parented to sits there).
  */
-function subpathToVertices(segs: Segment[], pivot: Vec2): VertexData[] {
+export function subpathToVertices(segs: Segment[], pivot: Vec2): VertexData[] {
   const points: Vec2[] = [];
   const outCtrl: (Vec2 | null)[] = [];
   const inCtrl: (Vec2 | null)[] = [];
@@ -190,8 +190,10 @@ function subpathToVertices(segs: Segment[], pivot: Vec2): VertexData[] {
   });
 }
 
-/** Splits absolute M/L/C/Z path data on each `M` into its subpaths (a fill can have several). */
-function splitSubpaths(d: string): Segment[][] {
+/** Splits absolute M/L/C/Z path data on each `M` into its subpaths (a fill can have several).
+ * Exported for `#export-rive/machine.ts`, which builds the state machine artboard's rest-pose
+ * geometry the same way this file does, without a per-clip shape track to morph/crossfade. */
+export function splitSubpaths(d: string): Segment[][] {
   const segs = parsePath(d);
   const subpaths: Segment[][] = [];
   for (const seg of segs) {
