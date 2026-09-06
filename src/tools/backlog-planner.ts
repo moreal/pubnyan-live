@@ -17,10 +17,22 @@ export interface PlannerFs {
   exec(cmd: string): Promise<{ stdout: string; stderr: string; exitCode: number }>;
 }
 
-/** Titles marked `[~]` in agent/backlog's copy of the backlog. Empty when the branch does not exist. */
+/** True when `stderr` looks like git reporting "that ref/path does not exist" rather than a real failure. */
+function isMissingRef(stderr: string): boolean {
+  return /unknown revision|invalid object name|does not exist/.test(stderr);
+}
+
+/**
+ * Titles marked `[~]` in agent/backlog's copy of the backlog. Empty when the branch (or the file
+ * on it) does not exist yet. Any other git failure (a transient error, a corrupt repo, ...) throws
+ * instead of silently reporting no claims, since that would let the planner touch a claimed item.
+ */
 export async function claimedOnAgentBranch(fs: PlannerFs): Promise<string[]> {
   const r = await fs.exec(`git show ${AGENT_BRANCH}:docs/backlog.md`);
-  if (r.exitCode !== 0) return [];
+  if (r.exitCode !== 0) {
+    if (isMissingRef(r.stderr)) return [];
+    throw new Error(`git show ${AGENT_BRANCH}:docs/backlog.md failed: ${r.stderr.trim() || r.stdout.trim()}`);
+  }
   return parseItems(r.stdout).filter((it) => it.state === 'claimed').map((it) => it.title);
 }
 
@@ -39,11 +51,11 @@ export async function writeBacklog(
   ops: Op[],
   summary: string,
 ): Promise<{ ok: true; sha: string; titles: string[] } | { ok: false; error: string; errors?: string[] }> {
+  if (/[\r\n]/.test(summary)) return { ok: false, error: 'summary must be a single line' };
   const branch = (await fs.exec('git branch --show-current')).stdout.trim();
   if (branch !== 'main') return { ok: false, error: `not on main (on ${branch}); the planner commits only on main` };
   const dirty = (await fs.exec('git status --porcelain -- docs/backlog.md')).stdout.trim();
   if (dirty !== '') return { ok: false, error: 'docs/backlog.md has uncommitted changes; commit or discard them first' };
-  if (/[\r\n]/.test(summary)) return { ok: false, error: 'summary must be a single line' };
 
   const md = await fs.readFile(path);
   const result = applyOps(md, ops, await claimedOnAgentBranch(fs));
@@ -66,9 +78,9 @@ export async function writeBacklog(
   return { ok: true, sha, titles: ops.map((o) => o.title) };
 }
 
-const opSchema = v.variant('op', [
-  v.object({ op: v.literal('insert'), title: v.pipe(v.string(), v.minLength(1)), text: v.pipe(v.string(), v.minLength(1)), section: v.pipe(v.string(), v.minLength(1)), after: v.optional(v.string()) }),
-  v.object({ op: v.literal('replace'), title: v.pipe(v.string(), v.minLength(1)), text: v.pipe(v.string(), v.minLength(1)) }),
+export const opSchema = v.variant('op', [
+  v.object({ op: v.literal('insert'), title: v.pipe(v.string(), v.minLength(1)), text: v.pipe(v.string(), v.minLength(1), v.regex(/^[^\r\n]+$/, 'text must be a single line')), section: v.pipe(v.string(), v.minLength(1)), after: v.optional(v.string()) }),
+  v.object({ op: v.literal('replace'), title: v.pipe(v.string(), v.minLength(1)), text: v.pipe(v.string(), v.minLength(1), v.regex(/^[^\r\n]+$/, 'text must be a single line')) }),
   v.object({ op: v.literal('remove'), title: v.pipe(v.string(), v.minLength(1)) }),
   v.object({ op: v.literal('reopen'), title: v.pipe(v.string(), v.minLength(1)) }),
 ]);

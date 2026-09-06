@@ -1,7 +1,7 @@
 'use agent';
 import { defineSubagent, useModel, useSandbox, useSubagent, useTool } from '@flue/runtime';
 import { local } from '@flue/runtime/node';
-import { REPO_ROOT } from '../root.ts';
+import { WORK_ROOT } from '../root.ts';
 import { markDoneTool, readBacklog } from '../tools/backlog.ts';
 import { gitCommit } from '../tools/git.ts';
 import { Implementer } from './implementer.ts';
@@ -23,7 +23,7 @@ export const reviewer = defineSubagent({
 
 export function Director() {
   useModel('anthropic/claude-opus-5');
-  useSandbox(local(), { cwd: REPO_ROOT });
+  useSandbox(local(), { cwd: WORK_ROOT });
   useTool(readBacklog);
   useTool(markDoneTool);
   useTool(gitCommit);
