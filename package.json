@@ -29,7 +29,8 @@
     "export:video": "node packages/export-video/src/cli.ts",
     "verify": "node packages/verify/src/cli.ts",
     "check": "npm run check:types && npm test && npm run verify",
-    "agent": "node scripts/agent-loop.mjs"
+    "agent": "node scripts/agent-loop.mjs",
+    "plan": "node scripts/plan.mjs"
   },
   "dependencies": {
     "@flue/runtime": "^2.0.3",
