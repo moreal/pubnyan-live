@@ -1,4 +1,5 @@
 // src/loop/run.test.ts
+import { setMaxListeners } from 'node:events';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -186,4 +187,28 @@ test('abortAwareSleep resolves immediately when the signal is already aborted', 
   const start = performance.now();
   await abortAwareSleep(ac.signal)(1500);
   expect(performance.now() - start).toBeLessThan(200);
+});
+
+test('abortAwareSleep does not leak abort listeners across repeated idle polls', async () => {
+  const warnings: Array<{ name: string }> = [];
+  const onWarning = (w: { name: string }) => warnings.push(w);
+  process.on('warning', onWarning);
+  try {
+    const ac = new AbortController();
+    // Node's default max listeners for AbortSignal is effectively unbounded, so a leak of a few
+    // dozen listeners never warns on its own; pin it to the generic EventTarget default (10) so a
+    // leaked listener per poll is caught within a small number of iterations, as it would be in
+    // any long-lived signal that has this cap applied (or the built-in default in older Node).
+    setMaxListeners(10, ac.signal);
+    const sleep = abortAwareSleep(ac.signal);
+    for (let i = 0; i < 30; i++) {
+      await sleep(1);
+    }
+    ac.abort();
+    // give any queued 'warning' event a chance to be emitted
+    await new Promise((resolve) => setImmediate(resolve));
+  } finally {
+    process.off('warning', onWarning);
+  }
+  expect(warnings.find((w) => w.name === 'MaxListenersExceededWarning')).toBeUndefined();
 });
