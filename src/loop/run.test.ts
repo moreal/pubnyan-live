@@ -96,6 +96,18 @@ test('an empty backlog waits and re-checks main; stops when the signal aborts', 
   expect(sleeps).toBe(2);
 });
 
+test('the default sleep is abort-aware: SIGINT-style abort during an idle poll stops promptly', async () => {
+  await writeFile(join(repo, 'docs', 'backlog.md'), '# Backlog\n\n## Section\n\n- [x] **Old.** done\n');
+  await git(execSh, repo, 'commit', '-q', '-am', 'empty');
+  const ac = new AbortController();
+  setTimeout(() => ac.abort(), 50);
+  const start = performance.now();
+  const r = await runLoop({ ...base(fakeDirector([])), max: null, pollMs: 60_000, signal: ac.signal, sleep: undefined });
+  const elapsed = performance.now() - start;
+  expect(r.reason).toBe('stopped');
+  expect(elapsed).toBeLessThan(5000);
+});
+
 test('stops after three consecutive failures', async () => {
   await writeFile(join(repo, 'docs', 'backlog.md'), `${BACKLOG}- [ ] **Third.** Done when: done.\n- [ ] **Fourth.** Done when: done.\n`);
   await git(execSh, repo, 'commit', '-q', '-am', 'more');

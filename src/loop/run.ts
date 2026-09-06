@@ -38,12 +38,24 @@ const defaultResolveEnv = (): NodeJS.ProcessEnv | null => {
   return auth.source === 'none' ? null : { ...process.env, ...auth.env };
 };
 
-const defaultSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+/** Resolves after `ms`, or immediately when `signal` aborts first, so an idle poll can be interrupted. */
+const abortAwareSleep = (signal: AbortSignal | undefined) => (ms: number) =>
+  new Promise<void>((resolve) => {
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(timer);
+      resolve();
+    };
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
 
 export async function runLoop(o: LoopOptions): Promise<LoopResult> {
   const sh = o.sh ?? execSh;
   const log = o.log ?? ((line: string) => console.log(`[agent-loop] ${line}`));
-  const sleep = o.sleep ?? defaultSleep;
+  const sleep = o.sleep ?? abortAwareSleep(o.signal);
   const resolveEnv = o.resolveEnv ?? defaultResolveEnv;
   const install = o.install ?? defaultInstall;
 

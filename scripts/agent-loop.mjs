@@ -33,7 +33,13 @@ function parseDuration(s) {
   if (!m) throw new Error(`bad duration: ${s}`);
   return Number(m[1]) * ({ ms: 1, s: 1000, m: 60_000, h: 3_600_000 }[m[2] ?? 'ms']);
 }
-const pollMs = values.poll ? parseDuration(values.poll) : Number(process.env.AGENT_POLL_MS ?? 5 * 60_000);
+let pollMs;
+try {
+  pollMs = values.poll ? parseDuration(values.poll) : Number(process.env.AGENT_POLL_MS ?? 5 * 60_000);
+} catch (err) {
+  console.error(`usage: npm run agent [-- --max N] [--poll 5m] [--no-worktree]\n${err.message}`);
+  process.exit(2);
+}
 const useWorktree = !values['no-worktree'] && !process.env.CI;
 
 const ac = new AbortController();
@@ -42,14 +48,19 @@ process.on('SIGINT', () => {
   ac.abort();
 });
 
-const r = await runLoop({
-  repoRoot: REPO_ROOT,
-  useWorktree,
-  max,
-  pollMs,
-  directorTimeoutMs: 45 * 60_000,
-  maxConsecutiveFailures: 3,
-  signal: ac.signal,
-});
-console.log(`[agent-loop] ${r.reason}; completed ${r.completed}, failed ${r.failed}`);
-process.exit(r.reason.startsWith('reached max') || r.reason === 'stopped' ? 0 : 1);
+try {
+  const r = await runLoop({
+    repoRoot: REPO_ROOT,
+    useWorktree,
+    max,
+    pollMs,
+    directorTimeoutMs: 45 * 60_000,
+    maxConsecutiveFailures: 3,
+    signal: ac.signal,
+  });
+  console.log(`[agent-loop] ${r.reason}; completed ${r.completed}, failed ${r.failed}`);
+  process.exit(r.reason.startsWith('reached max') || r.reason === 'stopped' ? 0 : 1);
+} catch (err) {
+  console.error(`[agent-loop] error: ${err.message}`);
+  process.exit(1);
+}
