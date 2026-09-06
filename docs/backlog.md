@@ -43,7 +43,7 @@ Deferred cleanups found in the foundation and agent-loop reviews. None blocks a 
 - [x] **`readFill` accepts only 6-digit hex.** In `svg-source.ts` anything else (3-digit hex, `rgb()`, named colours) silently falls back to black; parse them or fail loudly.
 - [x] **`svg-source` drops `Q` quadratics.** Lower them to cubics, or fail with a message naming the offending command and path id.
 - [x] **`isPathData` is a whitelist, not a grammar.** It accepts malformed data such as a lone `M` with no coordinates. Parse with `parsePath` instead.
-- [ ] **`REST` vectors in `sample.ts` are shared instances.** `REST.position` and `REST.scale` are handed straight to callers; a mutating consumer would corrupt every future sample. Freeze them or return copies.
+- [x] **`REST` vectors in `sample.ts` are shared instances.** `REST.position` and `REST.scale` are handed straight to callers; a mutating consumer would corrupt every future sample. Freeze them or return copies.
 - [ ] **Selector suffix errors conflate two failures.** `id#foo` reports "subpath index out of range"; distinguish "not a number" from "out of range".
 - [ ] **Typed loader for JSON rigs.** Replace the `as unknown as Rig` casts in `motion/index.ts` with a loader that validates and narrows.
 - [ ] **Repository LICENSE.** Decide the licence for the code and add the file; the artwork stays CC BY-SA 4.0 under its own attribution.
