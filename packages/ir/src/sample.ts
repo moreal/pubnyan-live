@@ -11,7 +11,13 @@ export interface SampledPart {
   matrix: Matrix;
 }
 
-export const REST = { position: [0, 0] as Vec2, rotation: 0, scale: [1, 1] as Vec2, opacity: 1, shape: 'default' };
+export const REST = Object.freeze({
+  position: Object.freeze([0, 0]) as Vec2,
+  rotation: 0,
+  scale: Object.freeze([1, 1]) as Vec2,
+  opacity: 1,
+  shape: 'default',
+});
 
 /** The keys around t and the eased progress from `from` to `to`. Holds outside the key range. */
 export function locate<V>(keys: Key<V>[], t: number): { from: Key<V>; to: Key<V>; p: number } {
