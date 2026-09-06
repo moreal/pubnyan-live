@@ -14,11 +14,16 @@ function center(d: string): Vec2 {
 
 export function buildRig(name: string, def: PartsMapRig, files: Record<string, SourcePath[]>): Rig {
   const expressions: Record<string, Record<string, string | null>> = {};
+  const overridePaths = def.overridesFile ? files[def.overridesFile] : undefined;
+  if (def.overridesFile && !overridePaths) throw new Error(`overrides file "${def.overridesFile}" was not loaded`);
   for (const [expr, e] of Object.entries(def.expressions)) {
     const paths = files[e.file];
     if (!paths) throw new Error(`expression "${expr}": file "${e.file}" was not loaded`);
     for (const mapped of Object.keys(e.map)) {
       if (!def.parts.some((p) => p.name === mapped)) throw new Error(`expression "${expr}" maps unknown part "${mapped}"`);
+    }
+    for (const mapped of Object.keys(e.overrides ?? {})) {
+      if (!def.parts.some((p) => p.name === mapped)) throw new Error(`expression "${expr}" overrides unknown part "${mapped}"`);
     }
     // Only mapped parts get an entry: an absent part inherits its default path, an explicit null hides it.
     const map: Record<string, string | null> = {};
@@ -50,6 +55,17 @@ export function buildRig(name: string, def: PartsMapRig, files: Record<string, S
         const d = map[mapped];
         if (d) map[mapped] = svgpath(d).translate(dx, dy).round(2).toString();
       }
+    }
+  }
+
+  // Overrides are applied after alignment: they're authored directly in the rig's final
+  // coordinate space, so they replace whatever `map` (and alignment) produced.
+  for (const [expr, e] of Object.entries(def.expressions)) {
+    if (!e.overrides) continue;
+    if (!overridePaths) throw new Error(`expression "${expr}" has overrides but rig "${name}" has no overridesFile`);
+    const map = expressions[expr];
+    for (const [part, sel] of Object.entries(e.overrides)) {
+      map[part] = selectPath(overridePaths, sel);
     }
   }
 

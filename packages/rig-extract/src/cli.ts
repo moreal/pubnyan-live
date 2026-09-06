@@ -15,15 +15,20 @@ const RIG_DIR = join(ROOT, 'rig');
 async function extract(): Promise<void> {
   const map = JSON.parse(await readFile(join(RIG_DIR, 'parts.map.json'), 'utf8')) as PartsMap;
   const cache = new Map<string, SourcePath[]>();
-  const load = async (file: string) => {
-    if (!cache.has(file)) cache.set(file, readSourceSvg(await readFile(join(ROOT, map.source, file), 'utf8')));
-    return cache.get(file)!;
+  const load = async (dir: string, file: string) => {
+    const key = `${dir}/${file}`;
+    if (!cache.has(key)) cache.set(key, readSourceSvg(await readFile(join(ROOT, dir, file), 'utf8')));
+    return cache.get(key)!;
   };
   const renderer = await Renderer.launch();
   try {
     for (const [name, def] of Object.entries(map.rigs)) {
       const files: Record<string, SourcePath[]> = {};
-      for (const e of Object.values(def.expressions)) files[e.file] = await load(e.file);
+      for (const e of Object.values(def.expressions)) files[e.file] = await load(map.source, e.file);
+      if (def.overridesFile) {
+        if (!map.overrides) throw new Error(`rig "${name}" has overridesFile but the parts map has no "overrides" source`);
+        files[def.overridesFile] = await load(map.overrides, def.overridesFile);
+      }
       const rig = buildRig(name, def, files);
       assertValid(validateRig(rig), `rig ${name}`);
       await writeFile(join(RIG_DIR, `${name}.rig.json`), JSON.stringify(rig, null, 2) + '\n');
