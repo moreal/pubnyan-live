@@ -1,4 +1,4 @@
-import type { Renderer } from '#verify/renderer.ts';
+import type { Renderer } from '#render/renderer.ts';
 
 const img = (png: Buffer) => `<img src="data:image/png;base64,${png.toString('base64')}" style="width:160px;height:auto;display:block;border:1px solid #ddd">`;
 

@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import type { Clip, Machine } from '#ir/types.ts';
-import type { Renderer } from '#verify/renderer.ts';
+import type { Renderer } from '#render/renderer.ts';
 
 const DOTLOTTIE_WEB_JS = new URL('../../../node_modules/@lottiefiles/dotlottie-web/dist/index.js', import.meta.url).pathname;
 const DOTLOTTIE_WEB_WASM = new URL('../../../node_modules/@lottiefiles/dotlottie-web/dist/dotlottie-player.wasm', import.meta.url).pathname;

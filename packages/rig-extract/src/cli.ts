@@ -7,7 +7,7 @@ import { buildRig } from '#rig-extract/build-rig.ts';
 import { inspectSvg } from '#rig-extract/inspect.ts';
 import type { PartsMap } from '#rig-extract/parts-map.ts';
 import { readSourceSvg, type SourcePath } from '#rig-extract/svg-source.ts';
-import { Renderer } from '#verify/renderer.ts';
+import { Renderer } from '#render/renderer.ts';
 
 const ROOT = new URL('../../../', import.meta.url).pathname;
 const RIG_DIR = join(ROOT, 'rig');

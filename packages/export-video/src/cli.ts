@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import { exportVideo } from '#export-video/index.ts';
 import { clips, getRig } from '#motion/index.ts';
-import { Renderer } from '#verify/renderer.ts';
+import { Renderer } from '#render/renderer.ts';
 
 const ROOT = new URL('../../../', import.meta.url).pathname;
 const OUT = join(ROOT, 'dist', 'video');

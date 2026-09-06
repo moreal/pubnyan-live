@@ -1,7 +1,7 @@
 import { sampleClip } from '#ir/sample.ts';
 import { renderStaticSvg } from '#ir/svg.ts';
 import type { Clip, Rig } from '#ir/types.ts';
-import type { Renderer } from '#verify/renderer.ts';
+import type { Renderer } from '#render/renderer.ts';
 
 /** The ground truth: sampleClip() drawn as a static SVG. */
 export function referenceFrame(renderer: Renderer, rig: Rig, clip: Clip, t: number): Promise<Buffer> {

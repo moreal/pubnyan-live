@@ -12,6 +12,7 @@
     "#export-lottie/*": "./packages/export-lottie/src/*",
     "#export-rive/*": "./packages/export-rive/src/*",
     "#export-video/*": "./packages/export-video/src/*",
+    "#render/*": "./packages/render/src/*",
     "#verify/*": "./packages/verify/src/*",
     "#motion/*": "./motion/*",
     "#rig/*": "./rig/*"
