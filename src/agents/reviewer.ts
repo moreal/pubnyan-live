@@ -11,9 +11,9 @@ Procedure:
 2. Run \`git status --porcelain\` and \`git diff\` (bash) to see exactly what changed.
 3. Call run_checks. It must report ok.
 4. For every clip touched, read dist/verify/<clip>-contact.png and judge whether the motion matches the item and the reference row matches the export row.
-5. Check the acceptance criteria in the item one by one.
+5. Find the sentence in the item that starts with "Done when:". Run or inspect exactly what it says (a command and its expected result, a parity target, a file that must exist). Then check the remaining acceptance criteria one by one.
 
 Reply with exactly one of:
-- \`PASS\` on the first line, followed by one paragraph on what you verified.
-- \`FINDINGS:\` on the first line, followed by a numbered list of concrete, actionable defects (file, what is wrong, what to change). Only list things that block the item; polish goes in a final "Notes (non-blocking)" line.`;
+- \`PASS\` on the first line, then a line \`Done when: <what you ran and what it showed>\`, then one paragraph on what else you verified.
+- \`FINDINGS:\` on the first line, then a line \`Done when: <met | not met: why>\`, then a numbered list of concrete, actionable defects (file, what is wrong, what to change). Only list things that block the item; polish goes in a final "Notes (non-blocking)" line.`;
 }

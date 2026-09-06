@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { REPO_ROOT } from '../root.ts';
+import { WORK_ROOT } from '../root.ts';
 
 /** Single-quote a string for POSIX sh. */
 export const shellQuote = (s: string): string => `'${s.replace(/'/g, `'\\''`)}'`;
@@ -12,7 +12,7 @@ type Exec = (cmd: string, timeoutMs?: number) => Promise<{ stdout: string; stder
  * later. This is where the two agree on what "the same tree" means, so the second `npm run
  * check` can be skipped when nothing has changed in between.
  */
-const CACHE_PATH = join(REPO_ROOT, 'data', 'checked-tree');
+const CACHE_PATH = join(WORK_ROOT, 'data', 'checked-tree');
 
 /**
  * The `git write-tree` hash of the current working tree (tracked, modified, and untracked
