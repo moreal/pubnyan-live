@@ -11,6 +11,10 @@ import exprShy from '#motion/clips/expr-shy.clip.ts';
 import spinner from '#motion/clips/spinner.clip.ts';
 import idle from '#motion/clips/idle.clip.ts';
 import wink from '#motion/clips/wink.clip.ts';
+import nod from '#motion/clips/nod.clip.ts';
+import tilt from '#motion/clips/tilt.clip.ts';
+import earTwitch from '#motion/clips/ear-twitch.clip.ts';
+import tailFlick from '#motion/clips/tail-flick.clip.ts';
 import toAngry from '#motion/clips/to-angry.clip.ts';
 import fromAngry from '#motion/clips/from-angry.clip.ts';
 import toCurious from '#motion/clips/to-curious.clip.ts';
@@ -30,6 +34,10 @@ export const clips: Clip[] = [
   spinner,
   idle,
   wink,
+  nod,
+  tilt,
+  earTwitch,
+  tailFlick,
   exprAngry,
   exprCurious,
   exprCry,
