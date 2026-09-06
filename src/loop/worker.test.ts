@@ -52,6 +52,16 @@ describe('parseDirectorReply', () => {
   test('a reply that breaks the contract is a crash', () => {
     expect(parseDirectorReply({ stdout: 'I did some things.', exitCode: 0, timedOut: false })).toEqual({ kind: 'crash', reason: 'director did not follow the reply contract: I did some things.' });
   });
+  test('FAILED line whose title contains a colon needs expectedTitle to split correctly', () => {
+    const r = { stdout: 'FAILED: export-lottie: static frame.: reason\n', exitCode: 0, timedOut: false };
+    expect(parseDirectorReply(r)).toEqual({ kind: 'failed', title: 'export-lottie', reason: 'static frame.: reason' });
+    expect(parseDirectorReply(r, 'export-lottie: static frame.')).toEqual({ kind: 'failed', title: 'export-lottie: static frame.', reason: 'reason' });
+  });
+  test('the exact "no claimed item" reply is a failed outcome carrying the expected title', () => {
+    const r = { stdout: 'FAILED: no claimed item\n', exitCode: 0, timedOut: false };
+    expect(parseDirectorReply(r, 'First.')).toEqual({ kind: 'failed', title: 'First.', reason: 'no claimed item' });
+    expect(parseDirectorReply(r)).toEqual({ kind: 'failed', title: '', reason: 'no claimed item' });
+  });
 });
 
 describe('ensureBranch', () => {
@@ -60,6 +70,31 @@ describe('ensureBranch', () => {
     expect(await g('branch', '--show-current')).toBe(AGENT_BRANCH);
     await ensureBranch(execSh, repo);
     expect(await g('branch', '--show-current')).toBe(AGENT_BRANCH);
+  });
+
+  test('creates agent/backlog from origin/agent/backlog when only the remote has it', async () => {
+    // A bare "origin" clone of repo, with agent/backlog pushed from a second clone.
+    const bare = await mkdtemp(join(tmpdir(), 'origin-'));
+    await git(execSh, repo, 'clone', '-q', '--bare', repo, bare);
+    const pusher = await mkdtemp(join(tmpdir(), 'pusher-'));
+    await git(execSh, repo, 'clone', '-q', bare, pusher);
+    await git(execSh, pusher, 'checkout', '-q', '-b', AGENT_BRANCH);
+    await writeFile(join(pusher, 'docs', 'backlog.md'), BACKLOG.replace('- [ ] **First.**', '- [~] **First.**'));
+    await commitAll('chore(backlog): claim First.', pusher);
+    await git(execSh, pusher, 'push', '-q', 'origin', AGENT_BRANCH);
+
+    const fresh = await mkdtemp(join(tmpdir(), 'fresh-'));
+    await git(execSh, repo, 'clone', '-q', bare, fresh);
+    // The fresh clone only knows main locally; agent/backlog exists only as a remote-tracking ref.
+    expect((await execSh('git', ['rev-parse', '--verify', '--quiet', `refs/heads/${AGENT_BRANCH}`], { cwd: fresh })).exitCode).not.toBe(0);
+
+    await ensureBranch(execSh, fresh);
+    expect(await git(execSh, fresh, 'branch', '--show-current')).toBe(AGENT_BRANCH);
+    expect(await git(execSh, fresh, 'rev-parse', 'HEAD')).toBe(await git(execSh, fresh, 'rev-parse', `origin/${AGENT_BRANCH}`));
+
+    await rm(bare, { recursive: true, force: true });
+    await rm(pusher, { recursive: true, force: true });
+    await rm(fresh, { recursive: true, force: true });
   });
 });
 
@@ -148,7 +183,23 @@ describe('claim / recover / fail', () => {
   test('markFailed with a clean tree does not stash', async () => {
     await ensureBranch(execSh, repo);
     await claimNext(execSh, repo);
-    expect((await markFailed(execSh, repo, 'First.', 'timed out')).stashed).toBe(false);
+    expect(await markFailed(execSh, repo, 'First.', 'timed out')).toEqual({ stashed: false, alreadyDone: false });
+  });
+
+  test('markFailed never flips an item the Director already marked done', async () => {
+    await ensureBranch(execSh, repo);
+    await claimNext(execSh, repo);
+    const md = await readFile(join(repo, 'docs', 'backlog.md'), 'utf8');
+    await writeFile(join(repo, 'docs', 'backlog.md'), md.replace('- [~] **First.**', '- [x] **First.**'));
+    await commitAll('feat: First.');
+    const before = await g('rev-parse', 'HEAD');
+    const beforeStashes = await g('stash', 'list');
+
+    expect(await markFailed(execSh, repo, 'First.', 'garbage reply')).toEqual({ stashed: false, alreadyDone: true });
+
+    expect(await g('rev-parse', 'HEAD')).toBe(before);
+    expect(await g('stash', 'list')).toBe(beforeStashes);
+    expect(await readFile(join(repo, 'docs', 'backlog.md'), 'utf8')).toContain('- [x] **First.**');
   });
 });
 
@@ -170,5 +221,18 @@ describe('runDirector', () => {
         timeoutMs: 1000,
       },
     ]);
+  });
+
+  test('logs the flue conversation id before spawning', async () => {
+    const lines: string[] = [];
+    const fake: Sh = async () => ({ stdout: 'DONE: First. (abc1234)\n', stderr: '', exitCode: 0, timedOut: false });
+    await runDirector(fake, '/work', { env: {}, timeoutMs: 1000, id: 'pubnyan-1', log: (l) => lines.push(l) });
+    expect(lines).toEqual(['flue run --id pubnyan-1']);
+  });
+
+  test('passes title through so a colon-bearing FAILED reply still splits correctly', async () => {
+    const fake: Sh = async () => ({ stdout: 'FAILED: export-lottie: static frame.: reason\n', stderr: '', exitCode: 0, timedOut: false });
+    const out = await runDirector(fake, '/work', { env: {}, timeoutMs: 1000, title: 'export-lottie: static frame.' });
+    expect(out).toEqual({ kind: 'failed', title: 'export-lottie: static frame.', reason: 'reason' });
   });
 });

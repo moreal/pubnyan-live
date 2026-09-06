@@ -14,11 +14,21 @@ export type DirectorOutcome =
   | { kind: 'failed'; title: string; reason: string }
   | { kind: 'crash'; reason: string };
 
-export function parseDirectorReply(r: { stdout: string; exitCode: number; timedOut: boolean }): DirectorOutcome {
+/**
+ * `expectedTitle`, when given, lets the parser split a `FAILED: <title>: <reason>` line correctly
+ * even when the title itself contains a colon; the non-greedy regex fallback below cannot.
+ */
+export function parseDirectorReply(r: { stdout: string; exitCode: number; timedOut: boolean }, expectedTitle?: string): DirectorOutcome {
   if (r.timedOut) return { kind: 'crash', reason: 'flue run timed out' };
   if (r.exitCode !== 0) return { kind: 'crash', reason: `flue run exited ${r.exitCode}` };
   const done = /^DONE: (.+) \(([0-9a-f]{7,40})\)\s*$/m.exec(r.stdout);
   if (done) return { kind: 'done', title: done[1], sha: done[2] };
+  if (/^FAILED: no claimed item\s*$/m.test(r.stdout)) return { kind: 'failed', title: expectedTitle ?? '', reason: 'no claimed item' };
+  if (expectedTitle) {
+    const prefix = `FAILED: ${expectedTitle}: `;
+    const line = r.stdout.split('\n').find((l) => l.startsWith(prefix));
+    if (line) return { kind: 'failed', title: expectedTitle, reason: line.slice(prefix.length).trim() };
+  }
   const failed = /^FAILED: (.+?): (.+)$/m.exec(r.stdout);
   if (failed) return { kind: 'failed', title: failed[1], reason: failed[2].trim() };
   const last = r.stdout.trim().split('\n').filter(Boolean).pop() ?? '';
@@ -34,12 +44,25 @@ async function exists(path: string): Promise<boolean> {
   }
 }
 
-/** Leave HEAD of `workRoot` on agent/backlog, creating it from HEAD when it does not exist. Never resets an existing branch. */
+/**
+ * Leave HEAD of `workRoot` on agent/backlog, creating it from HEAD when it does not exist locally
+ * or remotely, or from `origin/agent/backlog` when only the remote has it. Never resets an
+ * existing local branch.
+ */
 export async function ensureBranch(sh: Sh, workRoot: string): Promise<void> {
   const current = await git(sh, workRoot, 'branch', '--show-current');
   if (current === AGENT_BRANCH) return;
   const has = await sh('git', ['rev-parse', '--verify', '--quiet', `refs/heads/${AGENT_BRANCH}`], { cwd: workRoot });
-  await git(sh, workRoot, 'checkout', '-q', ...(has.exitCode === 0 ? [AGENT_BRANCH] : ['-b', AGENT_BRANCH]));
+  if (has.exitCode === 0) {
+    await git(sh, workRoot, 'checkout', '-q', AGENT_BRANCH);
+    return;
+  }
+  const hasRemote = await sh('git', ['rev-parse', '--verify', '--quiet', `refs/remotes/origin/${AGENT_BRANCH}`], { cwd: workRoot });
+  if (hasRemote.exitCode === 0) {
+    await git(sh, workRoot, 'checkout', '-q', '-b', AGENT_BRANCH, `origin/${AGENT_BRANCH}`);
+    return;
+  }
+  await git(sh, workRoot, 'checkout', '-q', '-b', AGENT_BRANCH);
 }
 
 /**
@@ -110,27 +133,35 @@ export async function claimNext(sh: Sh, workRoot: string): Promise<ClaimedItem |
   return { title: item.title, text: item.text, section: item.section };
 }
 
-/** Stash whatever the failed run left behind, mark the item `[!]` with the reason, and commit. */
-export async function markFailed(sh: Sh, workRoot: string, title: string, reason: string, date?: string): Promise<{ stashed: boolean }> {
+/**
+ * Stash whatever the failed run left behind, mark the item `[!]` with the reason, and commit.
+ * Never flips an item that the Director already marked `[x]` before crashing: the item stays
+ * done, and nothing is stashed or committed.
+ */
+export async function markFailed(sh: Sh, workRoot: string, title: string, reason: string, date?: string): Promise<{ stashed: boolean; alreadyDone: boolean }> {
+  const before = await readBacklog(workRoot);
+  const item = parseItems(before).find((it) => it.title === title);
+  if (item?.state === 'done') return { stashed: false, alreadyDone: true };
   const dirty = (await git(sh, workRoot, 'status', '--porcelain')) !== '';
   if (dirty) await git(sh, workRoot, 'stash', 'push', '-u', '-q', '-m', `failed: ${title}`);
   const md = await readBacklog(workRoot);
   await commitBacklog(sh, workRoot, setState(md, title, 'failed', { reason, date }), `chore(backlog): fail ${title}`);
-  return { stashed: dirty };
+  return { stashed: dirty, alreadyDone: false };
 }
 
 /** Run the Director once for the claimed item, inside `workRoot`, and classify its reply. */
 export async function runDirector(
   sh: Sh,
   workRoot: string,
-  opts: { env: NodeJS.ProcessEnv; timeoutMs: number; signal?: AbortSignal; id?: string },
+  opts: { env: NodeJS.ProcessEnv; timeoutMs: number; signal?: AbortSignal; id?: string; title?: string; log?: (line: string) => void },
 ): Promise<DirectorOutcome> {
   const id = opts.id ?? `pubnyan-${Date.now()}`;
+  opts.log?.(`flue run --id ${id}`);
   const r = await sh('npx', ['flue', 'run', 'src/agents/director.ts', '-m', 'next', '--id', id], {
     cwd: workRoot,
     env: { ...opts.env, PUBNYAN_ROOT: workRoot },
     timeoutMs: opts.timeoutMs,
     signal: opts.signal,
   });
-  return parseDirectorReply(r);
+  return parseDirectorReply(r, opts.title);
 }

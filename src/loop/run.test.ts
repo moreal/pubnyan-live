@@ -3,7 +3,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, test } from 'vitest';
-import { runLoop } from './run.ts';
+import { abortAwareSleep, runLoop } from './run.ts';
 import { execSh, git, type Sh } from './sh.ts';
 
 const BACKLOG = `# Backlog
@@ -31,21 +31,26 @@ afterEach(async () => {
 });
 
 /** A Director stand-in: marks the claimed item done and commits, like the real one, then replies. */
-function fakeDirector(script: Array<'done' | 'failed' | 'crash'>): Sh {
+function fakeDirector(script: Array<'done' | 'failed' | 'crash' | 'done-then-garbage' | 'sigint'>, opts: { ac?: AbortController } = {}): Sh {
   let i = 0;
-  return async (cmd, args, opts) => {
-    if (cmd !== 'npx') return execSh(cmd, args, opts);
-    const cwd = opts?.cwd ?? repo;
+  return async (cmd, args, execOpts) => {
+    if (cmd !== 'npx') return execSh(cmd, args, execOpts);
+    const cwd = execOpts?.cwd ?? repo;
     const md = await readFile(join(cwd, 'docs', 'backlog.md'), 'utf8');
     const title = /- \[~\] \*\*(.+?)\*\*/.exec(md)![1];
     const kind = script[i++] ?? 'crash';
-    if (kind === 'done') {
+    if (kind === 'done' || kind === 'done-then-garbage') {
       await writeFile(join(cwd, 'docs', 'backlog.md'), md.replace(`- [~] **${title}**`, `- [x] **${title}**`));
       await git(execSh, cwd, 'commit', '-q', '-am', `feat: ${title}`);
       const sha = await git(execSh, cwd, 'rev-parse', '--short', 'HEAD');
+      if (kind === 'done-then-garbage') return { stdout: 'I got confused and forgot the reply contract.', stderr: '', exitCode: 0, timedOut: false };
       return { stdout: `DONE: ${title} (${sha})\n`, stderr: '', exitCode: 0, timedOut: false };
     }
     if (kind === 'failed') return { stdout: `FAILED: ${title}: could not\n`, stderr: '', exitCode: 0, timedOut: false };
+    if (kind === 'sigint') {
+      opts.ac?.abort();
+      return { stdout: '', stderr: '', exitCode: 130, timedOut: false };
+    }
     return { stdout: '', stderr: 'boom', exitCode: 1, timedOut: false };
   };
 }
@@ -130,4 +135,55 @@ test('refuses a dirty work tree', async () => {
   await writeFile(join(repo, '.worktrees', 'agent', 'junk.txt'), 'x');
   const r = await runLoop({ ...base(fakeDirector(['done'])), max: 1 });
   expect(r.reason).toMatch(/working tree is dirty/);
+});
+
+test('a director that marks done + commits but replies with garbage counts as completed, not failed', async () => {
+  const r = await runLoop({ ...base(fakeDirector(['done-then-garbage'])), max: 1 });
+  expect(r).toEqual({ completed: 1, failed: 0, reason: 'reached max 1' });
+  const work = join(repo, '.worktrees', 'agent');
+  expect(await git(execSh, work, 'log', '--format=%s')).not.toMatch(/fail/);
+  const md = await readFile(join(work, 'docs', 'backlog.md'), 'utf8');
+  expect(md).toContain('- [x] **First.**');
+});
+
+test('SIGINT during the Director run leaves the claim in place and does not mark it failed', async () => {
+  const ac = new AbortController();
+  const sh = fakeDirector(['sigint'], { ac });
+  const r = await runLoop({ ...base(sh), max: null, signal: ac.signal });
+  expect(r).toEqual({ completed: 0, failed: 0, reason: 'stopped' });
+  const work = join(repo, '.worktrees', 'agent');
+  const md = await readFile(join(work, 'docs', 'backlog.md'), 'utf8');
+  expect(md).toContain('- [~] **First.**');
+  expect(await git(execSh, work, 'log', '--format=%s')).not.toMatch(/fail/);
+});
+
+test('a stale lock left by a dead process does not block the loop', async () => {
+  const work = join(repo, '.worktrees', 'agent');
+  await execSh('mkdir', ['-p', join(repo, '.worktrees')]);
+  await writeFile(`${work}.lock`, '999999');
+  const r = await runLoop({ ...base(fakeDirector(['done'])), max: 1 });
+  expect(r).toEqual({ completed: 1, failed: 0, reason: 'reached max 1' });
+});
+
+test('a lock held by the current (alive) process refuses to start a second loop', async () => {
+  await runLoop({ ...base(fakeDirector([])), max: 0 }); // creates the worktree
+  const work = join(repo, '.worktrees', 'agent');
+  await writeFile(`${work}.lock`, String(process.pid));
+  const r = await runLoop({ ...base(fakeDirector(['done'])), max: 1 });
+  expect(r).toEqual({ completed: 0, failed: 0, reason: `another loop is running (pid ${process.pid})` });
+  await rm(`${work}.lock`, { force: true });
+});
+
+test('the lock is released after the loop returns', async () => {
+  const work = join(repo, '.worktrees', 'agent');
+  await runLoop({ ...base(fakeDirector(['done'])), max: 1 });
+  await expect(readFile(`${work}.lock`, 'utf8')).rejects.toThrow();
+});
+
+test('abortAwareSleep resolves immediately when the signal is already aborted', async () => {
+  const ac = new AbortController();
+  ac.abort();
+  const start = performance.now();
+  await abortAwareSleep(ac.signal)(1500);
+  expect(performance.now() - start).toBeLessThan(200);
 });

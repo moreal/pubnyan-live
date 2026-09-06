@@ -35,7 +35,14 @@ function parseDuration(s) {
 }
 let pollMs;
 try {
-  pollMs = values.poll ? parseDuration(values.poll) : Number(process.env.AGENT_POLL_MS ?? 5 * 60_000);
+  if (values.poll) {
+    pollMs = parseDuration(values.poll);
+  } else if (process.env.AGENT_POLL_MS !== undefined) {
+    pollMs = Number(process.env.AGENT_POLL_MS);
+    if (!Number.isInteger(pollMs) || pollMs <= 0) throw new Error(`bad AGENT_POLL_MS: ${process.env.AGENT_POLL_MS}`);
+  } else {
+    pollMs = 5 * 60_000;
+  }
 } catch (err) {
   console.error(`usage: npm run agent [-- --max N] [--poll 5m] [--no-worktree]\n${err.message}`);
   process.exit(2);
