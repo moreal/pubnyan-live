@@ -17,7 +17,7 @@ Work queue shared by humans and agents. Top item first. Mark `[x]` in the commit
 - [x] **export-rive: rig shapes.** Every part as Shape > Path (PointsPath with CubicDetachedVertex objects from the rig's C segments) + Fill > SolidColor, parented through `parentId` to a Node per part (pivot handled by Node x/y plus path offset). Register `riveTarget` (render via `@rive-app/canvas` on a `<canvas>` at artboard size, `rive.scrub(animationName, t)`). Parity on a static frame passes.
 - [x] **export-rive: linear animations.** One LinearAnimation per clip with KeyedObject > KeyedProperty > KeyFrameDouble for x, y, rotation, scaleX, scaleY, opacity, using CubicEaseInterpolator objects for eases. Parity on `spinner` and `idle` passes.
 - [x] **export-rive: shape keyframes.** Morphs via keyed vertex properties; crossfade via opacity on per-expression shapes.
-- [ ] **export-rive: state machine.** StateMachine with StateMachineNumber/Bool/Trigger inputs, one StateMachineLayer per machine layer, AnimationState per state, StateTransition with TransitionNumberCondition / TransitionBoolCondition / TransitionTriggerCondition, EntryState wired. Load in the runtime and assert `stateMachineInputs()` names match `motion/machine.ts`.
+- [x] **export-rive: state machine.** StateMachine with StateMachineNumber/Bool/Trigger inputs, one StateMachineLayer per machine layer, AnimationState per state, StateTransition with TransitionNumberCondition / TransitionBoolCondition / TransitionTriggerCondition, EntryState wired. Load in the runtime and assert `stateMachineInputs()` names match `motion/machine.ts`.
 
 ## Phase 6: Video
 
