@@ -33,6 +33,10 @@ The `dist/svg` files morph shapes with CSS `d: path()`, which needs a browser th
 
 `package.json` `allowScripts` pins the packages whose install scripts npm 11 may run — puppeteer's Chrome download among them. Update those entries whenever the pinned versions change, or the download is skipped and every headless render fails.
 
+## License
+
+The code in this repository is licensed under the [MIT License](LICENSE).
+
 ## Attribution
 
 The pubnyan artwork is © 2025 Bak Eunji, licensed [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), from [hackers-pub/visual-identity](https://github.com/hackers-pub/visual-identity). Every file under `dist/` carries this attribution and is licensed under the same terms.
