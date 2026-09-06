@@ -1,11 +1,19 @@
+import { parsePath } from '#ir/path.ts';
 import type { Rig, Vec2 } from '#ir/types.ts';
 
 export const isVec2 = (v: unknown): v is Vec2 =>
   Array.isArray(v) && v.length === 2 && v.every((n) => typeof n === 'number' && Number.isFinite(n));
 
-/** Absolute path data restricted to M/L/C/Z. Rejects relative commands and arcs. */
-export const isPathData = (d: unknown): d is string =>
-  typeof d === 'string' && /^M[0-9.\s\-eMLCZ]*$/.test(d);
+/** Absolute path data restricted to M/L/C/Z. Rejects relative commands, arcs, and malformed data. */
+export const isPathData = (d: unknown): d is string => {
+  if (typeof d !== 'string' || !d.startsWith('M')) return false;
+  try {
+    const segs = parsePath(d);
+    return segs.length > 0 && segs[0][0] === 'M';
+  } catch {
+    return false;
+  }
+};
 
 export function validateRig(rig: Rig): string[] {
   const errors: string[] = [];
