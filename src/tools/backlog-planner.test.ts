@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, test } from 'vitest';
@@ -77,4 +77,22 @@ test('writeBacklog refuses off main and with a dirty backlog', async () => {
   await git(execSh, repo, 'checkout', '-q', 'main');
   await writeFile(path, `${BACKLOG}\nlocal edit\n`);
   expect(await writeBacklog(fs, path, [{ op: 'remove', title: 'Two.' }], 'x')).toEqual({ ok: false, error: 'docs/backlog.md has uncommitted changes; commit or discard them first' });
+});
+
+test('writeBacklog restores docs/backlog.md when the commit fails', async () => {
+  const hookPath = join(repo, '.git', 'hooks', 'pre-commit');
+  await writeFile(hookPath, '#!/bin/sh\nexit 1\n');
+  await chmod(hookPath, 0o755);
+  const r = await writeBacklog(fs, path, [{ op: 'insert', title: 'Three.', text: 'Third. Done when: three.', section: 'Section' }], 'add Three');
+  expect(r.ok).toBe(false);
+  expect((r as { ok: false; error: string }).error).toMatch(/restored/);
+  expect(await git(execSh, repo, 'status', '--porcelain')).toBe('');
+  expect(await fs.readFile(path)).toBe(BACKLOG);
+});
+
+test('writeBacklog refuses a multi-line summary before running any git command', async () => {
+  const r = await writeBacklog(fs, path, [{ op: 'remove', title: 'Two.' }], 'first line\nsecond line');
+  expect(r).toEqual({ ok: false, error: 'summary must be a single line' });
+  expect(await fs.readFile(path)).toBe(BACKLOG);
+  expect(await git(execSh, repo, 'status', '--porcelain')).toBe('');
 });
