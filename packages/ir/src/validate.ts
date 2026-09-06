@@ -45,3 +45,39 @@ export function validateRig(rig: Rig): string[] {
 export function assertValid(errors: string[], label: string): void {
   if (errors.length > 0) throw new Error(`${label} is invalid:\n- ${errors.join('\n- ')}`);
 }
+
+/** Structural check that narrows `unknown` (e.g. a parsed JSON rig file) to `Rig`, without judging content. */
+export function isRig(data: unknown): data is Rig {
+  if (typeof data !== 'object' || data === null) return false;
+  const r = data as Record<string, unknown>;
+  if (typeof r.name !== 'string') return false;
+  if (typeof r.artboard !== 'object' || r.artboard === null) return false;
+  const artboard = r.artboard as Record<string, unknown>;
+  if (typeof artboard.width !== 'number' || typeof artboard.height !== 'number') return false;
+  if (r.attribution !== undefined && typeof r.attribution !== 'string') return false;
+  if (!Array.isArray(r.parts)) return false;
+  for (const p of r.parts) {
+    if (typeof p !== 'object' || p === null) return false;
+    const part = p as Record<string, unknown>;
+    if (typeof part.name !== 'string') return false;
+    if (typeof part.fill !== 'string') return false;
+    if (!isVec2(part.pivot)) return false;
+    if (part.parent !== undefined && typeof part.parent !== 'string') return false;
+    if (part.path !== null && typeof part.path !== 'string') return false;
+  }
+  if (typeof r.expressions !== 'object' || r.expressions === null) return false;
+  for (const map of Object.values(r.expressions as Record<string, unknown>)) {
+    if (typeof map !== 'object' || map === null) return false;
+    for (const path of Object.values(map as Record<string, unknown>)) {
+      if (path !== null && typeof path !== 'string') return false;
+    }
+  }
+  return true;
+}
+
+/** Parses and fully validates an untyped rig (e.g. `import ... with { type: 'json' }`), narrowing to `Rig`. */
+export function loadRig(data: unknown, label: string): Rig {
+  if (!isRig(data)) throw new Error(`rig ${label} is not a well-formed rig: unexpected shape`);
+  assertValid(validateRig(data), `rig ${label}`);
+  return data;
+}

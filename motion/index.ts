@@ -1,7 +1,7 @@
 import { validateClip } from '#ir/clip.ts';
 import { validateMachine } from '#ir/machine.ts';
 import type { Clip, Machine, Rig } from '#ir/types.ts';
-import { assertValid, validateRig } from '#ir/validate.ts';
+import { assertValid, loadRig } from '#ir/validate.ts';
 import pubnyanRig from '#rig/pubnyan.rig.json' with { type: 'json' };
 import starorbitRig from '#rig/starorbit.rig.json' with { type: 'json' };
 import exprAngry from '#motion/clips/expr-angry.clip.ts';
@@ -26,8 +26,8 @@ import fromShy from '#motion/clips/from-shy.clip.ts';
 import machineDef from '#motion/machine.ts';
 
 export const rigs: Record<string, Rig> = {
-  pubnyan: pubnyanRig as unknown as Rig,
-  starorbit: starorbitRig as unknown as Rig,
+  pubnyan: loadRig(pubnyanRig, 'pubnyan'),
+  starorbit: loadRig(starorbitRig, 'starorbit'),
 };
 
 export const clips: Clip[] = [
@@ -59,7 +59,7 @@ export function getRig(name: string): Rig {
   return rig;
 }
 
-// Validate once, here, so every consumer of the motion definition inherits it.
-for (const rig of Object.values(rigs)) assertValid(validateRig(rig), `rig ${rig.name}`);
+// Rigs are validated by loadRig above; validate clips and the machine once, here, so every
+// consumer of the motion definition inherits it.
 for (const clip of clips) assertValid(validateClip(clip, getRig(clip.rig)), `clip ${clip.name}`);
 assertValid(validateMachine(machine, getRig(machine.rig), clips), `machine`);

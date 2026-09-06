@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import type { Rig } from '#ir/types.ts';
-import { assertValid, validateRig } from '#ir/validate.ts';
+import { assertValid, isRig, loadRig, validateRig } from '#ir/validate.ts';
 
 const good: Rig = {
   name: 'test',
@@ -50,5 +50,40 @@ describe('validateRig', () => {
   test('assertValid throws with all messages', () => {
     expect(() => assertValid(['a', 'b'], 'rig test')).toThrow(/rig test.*\n- a\n- b/s);
     expect(() => assertValid([], 'ok')).not.toThrow();
+  });
+});
+
+describe('isRig', () => {
+  test('accepts a well-formed rig', () => {
+    expect(isRig(good)).toBe(true);
+  });
+
+  test.each([
+    ['not an object', 42],
+    ['null', null],
+    ['missing name', { ...good, name: undefined }],
+    ['non-numeric artboard', { ...good, artboard: { width: '100', height: 100 } }],
+    ['parts not an array', { ...good, parts: {} }],
+    ['part missing fill', { ...good, parts: [{ name: 'body', pivot: [0, 0], path: null }] }],
+    ['part with bad pivot', { ...good, parts: [{ name: 'body', fill: '#000000', pivot: [0], path: null }] }],
+    ['expressions not an object', { ...good, expressions: null }],
+    ['expression path neither null nor string', { ...good, expressions: { x: { body: 1 } } }],
+  ])('rejects %s', (_label, data) => {
+    expect(isRig(data)).toBe(false);
+  });
+});
+
+describe('loadRig', () => {
+  test('narrows and returns a well-formed rig', () => {
+    expect(loadRig(good, 'test')).toEqual(good);
+  });
+
+  test('throws for structurally malformed data', () => {
+    expect(() => loadRig({ nope: true }, 'test')).toThrow(/not a well-formed rig/);
+  });
+
+  test('throws for structurally valid but content-invalid data', () => {
+    const bad = { ...good, parts: [{ ...good.parts[0], fill: 'red' }] };
+    expect(() => loadRig(bad, 'test')).toThrow(/rig test is invalid/);
   });
 });
