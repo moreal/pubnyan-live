@@ -1,6 +1,6 @@
 # Backlog
 
-Work queue shared by humans and agents. Top item first. Mark `[x]` in the commit that completes an item. Every item ends with `npm run verify` green and a look at the contact sheet.
+Work queue shared by humans, the Planner agent, and the worker loop. Items are taken top to bottom. States: `[ ]` open, `[~]` claimed by the running worker (do not edit), `[x]` done (in the commit that completed it), `[!]` failed (reason in the bullet below it; fix the text and reopen). Every item ends with a `Done when:` sentence naming an executable check; the Reviewer verifies it, and every item still ends with `npm run verify` green and a look at the contact sheet.
 
 ## Phase 4: Lottie
 
