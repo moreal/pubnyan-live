@@ -11,9 +11,10 @@
  * part's expression at t=0) is still resolved, so the file matches the reference sampler's t=0
  * frame for clips that hold an expression from the start (e.g. `expr-angry`).
  */
+import { EASES } from '#ir/easing.ts';
 import { parsePath, type Segment } from '#ir/path.ts';
-import { groupTracks, resolvePath } from '#ir/sample.ts';
-import type { Clip, Rig, RigPart, Vec2 } from '#ir/types.ts';
+import { groupTracks, resolvePath, type TracksByProperty } from '#ir/sample.ts';
+import type { Clip, EaseName, Rig, RigPart, Vec2 } from '#ir/types.ts';
 import { KEYS } from '#export-rive/keys.generated.ts';
 import { RivWriter } from '#export-rive/writer.ts';
 
@@ -26,6 +27,11 @@ const { typeKey: POINTS_PATH } = KEYS.PointsPath!;
 const { typeKey: CUBIC_DETACHED_VERTEX } = KEYS.CubicDetachedVertex!;
 const { typeKey: FILL } = KEYS.Fill!;
 const { typeKey: SOLID_COLOR } = KEYS.SolidColor!;
+const { typeKey: LINEAR_ANIMATION } = KEYS.LinearAnimation!;
+const { typeKey: KEYED_OBJECT } = KEYS.KeyedObject!;
+const { typeKey: KEYED_PROPERTY } = KEYS.KeyedProperty!;
+const { typeKey: KEY_FRAME_DOUBLE } = KEYS.KeyFrameDouble!;
+const { typeKey: CUBIC_EASE_INTERPOLATOR } = KEYS.CubicEaseInterpolator!;
 
 const NAME = KEYS.Component!.properties.name!.key;
 const PARENT_ID = KEYS.Component!.properties.parentId!.key;
@@ -43,6 +49,36 @@ const IN_DISTANCE = KEYS.CubicDetachedVertex!.properties.inDistance!.key;
 const OUT_ROTATION = KEYS.CubicDetachedVertex!.properties.outRotation!.key;
 const OUT_DISTANCE = KEYS.CubicDetachedVertex!.properties.outDistance!.key;
 const COLOR_VALUE = KEYS.SolidColor!.properties.colorValue!.key;
+const NODE_ROTATION = KEYS.TransformComponent!.properties.rotation!.key;
+const NODE_SCALE_X = KEYS.TransformComponent!.properties.scaleX!.key;
+const NODE_SCALE_Y = KEYS.TransformComponent!.properties.scaleY!.key;
+const NODE_OPACITY = KEYS.WorldTransformComponent!.properties.opacity!.key;
+const ANIMATION_NAME = KEYS.Animation!.properties.name!.key;
+const ANIM_FPS = KEYS.LinearAnimation!.properties.fps!.key;
+const ANIM_DURATION = KEYS.LinearAnimation!.properties.duration!.key;
+const ANIM_LOOP_VALUE = KEYS.LinearAnimation!.properties.loopValue!.key;
+const KEYED_OBJECT_ID = KEYS.KeyedObject!.properties.objectId!.key;
+const KEYED_PROPERTY_KEY = KEYS.KeyedProperty!.properties.propertyKey!.key;
+const KEY_FRAME_FRAME = KEYS.KeyFrame!.properties.frame!.key;
+const KEY_FRAME_INTERPOLATION_TYPE = KEYS.InterpolatingKeyFrame!.properties.interpolationType!.key;
+const KEY_FRAME_VALUE = KEYS.KeyFrameDouble!.properties.value!.key;
+// `CubicEaseInterpolator` (a concrete, no-extra-fields subclass of `CubicInterpolator`, see
+// cubic_ease_interpolator_base.hpp in the pinned runtime) inherits x1/y1/x2/y2 rather than
+// redeclaring them; the property keys below are the ones the runtime's `CubicInterpolatorBase`
+// actually deserializes; `keys.generated.ts` only lists a class's own fields, so they are read
+// off `CubicInterpolator` here.
+const CUBIC_X1 = KEYS.CubicInterpolator!.properties.x1!.key;
+const CUBIC_Y1 = KEYS.CubicInterpolator!.properties.y1!.key;
+const CUBIC_X2 = KEYS.CubicInterpolator!.properties.x2!.key;
+const CUBIC_Y2 = KEYS.CubicInterpolator!.properties.y2!.key;
+/** `InterpolatingKeyFrame::interpolationType() == 0` means "hold" (`keyed_property.cpp`); any
+ * other value selects `applyInterpolation`. The importer (not an `interpolatorId` property) wires
+ * up which interpolator that is: a `CubicInterpolator`-family object read immediately after an
+ * `InterpolatingKeyFrame` is adopted as that keyframe's own interpolator (`KeyFrameImporter`,
+ * confirmed against the real runtime — a `CubicEaseInterpolator` written before its keyframe
+ * instead pops the still-open `KeyedProperty`/`KeyedObject` import-stack contexts, silently
+ * orphaning every `KeyFrame` written after it: the property parses but never applies). */
+const INTERPOLATION_TYPE_CUBIC = 1;
 
 export interface RiveSpike {
   artboardName: string;
@@ -158,11 +194,22 @@ function splitSubpaths(d: string): Segment[][] {
   return subpaths;
 }
 
+interface FrameValue {
+  frame: number;
+  value: number;
+  ease?: EaseName;
+}
+
 /**
- * Exports the rig's rest pose (no clip animation baked in yet: see the backlog's "linear
- * animations" item) as `.riv` bytes: one `Backboard`, one `Artboard`, and per rig part a
+ * Exports the rig's rest pose (`Backboard`, `Artboard`, per rig part a
  * `Node -> Shape -> (PointsPath, Fill -> SolidColor)` chain, `Node`s parented to their rig
- * parent's `Node` (or the artboard for root parts).
+ * parent's `Node` or the artboard for root parts) plus one `LinearAnimation` for the clip
+ * (backlog: "linear animations"): `x`/`y`/`rotation`/`scaleX`/`scaleY`/`opacity` become
+ * `KeyedProperty > KeyFrameDouble` tracks under one `KeyedObject` per animated part, each
+ * non-final keyframe pointing (via `interpolatorId`) at a `CubicEaseInterpolator` built from
+ * `EASES` for the segment ending at the next key (mirrors `export-lottie`'s bezier tangents).
+ * Shape tracks are not yet keyframed (backlog: "shape keyframes"): only their first key's
+ * expression is baked into the rest `Shape`, as before.
  */
 export function exportRive(rig: Rig, clip: Clip): Buffer {
   const w = new RivWriter();
@@ -205,6 +252,7 @@ export function exportRive(rig: Rig, clip: Clip): Buffer {
     nodeIndexByPart.set(part.name, nodeIndex);
   }
 
+  const shapeIndexByPart = new Map<string, number>();
   for (const part of [...rig.parts].reverse()) {
     // A shape track's first key is this part's rest expression (mirrors the reference sampler's
     // t=0, since `locate()` holds at the first key for any t at or before it); no shape track
@@ -214,6 +262,7 @@ export function exportRive(rig: Rig, clip: Clip): Buffer {
     if (!path) continue; // hidden by default (e.g. tears): no geometry to emit at rest.
     const nodeIndex = nodeIndexByPart.get(part.name)!;
     const shapeIndex = add(SHAPE, [[PARENT_ID, nodeIndex]]);
+    shapeIndexByPart.set(part.name, shapeIndex);
     for (const [i, sub] of splitSubpaths(path).entries()) {
       const pathIndex = add(POINTS_PATH, [
         [PARENT_ID, shapeIndex],
@@ -237,6 +286,89 @@ export function exportRive(rig: Rig, clip: Clip): Buffer {
       [PARENT_ID, fillIndex],
       [COLOR_VALUE, part.fill],
     ]);
+  }
+
+  // `KeyFrame.frame` is a uint, so every keyed time must land on an exact integer frame at
+  // whatever fps the `LinearAnimation` declares; clip authors write plain decimal seconds (e.g.
+  // idle's 3.22s blink-open key) that are not exact multiples of `clip.fps`. Scaling up the
+  // animation's own fps (which only this file's frame<->second math uses; playback elsewhere
+  // seeks by seconds) makes every sampled clip's key times exact multiples with room to spare.
+  const FPS_SCALE = 1000;
+  const animFps = clip.fps * FPS_SCALE;
+  const toFrame = (t: number) => Math.round(t * animFps);
+
+  /** One `CubicEaseInterpolator` per eased segment, then a `KeyFrameDouble` per key referencing
+   * it via `interpolatorId` (the last key has neither: nothing follows it). */
+  const writeDoubleTrack = (propertyKey: number, values: FrameValue[]): void => {
+    add(KEYED_PROPERTY, [[KEYED_PROPERTY_KEY, propertyKey]]);
+    for (const [i, v] of values.entries()) {
+      const next = values[i + 1];
+      const props: [number, number | string][] = [
+        [KEY_FRAME_FRAME, v.frame],
+        [KEY_FRAME_VALUE, v.value],
+      ];
+      if (next) props.push([KEY_FRAME_INTERPOLATION_TYPE, INTERPOLATION_TYPE_CUBIC]);
+      add(KEY_FRAME_DOUBLE, props);
+      if (next) {
+        const [x1, y1, x2, y2] = EASES[next.ease ?? 'linear'];
+        add(CUBIC_EASE_INTERPOLATOR, [
+          [CUBIC_X1, x1],
+          [CUBIC_Y1, y1],
+          [CUBIC_X2, x2],
+          [CUBIC_Y2, y2],
+        ]);
+      }
+    }
+  };
+
+  const duration = Math.max(1, Math.round(clip.duration * animFps));
+  add(LINEAR_ANIMATION, [
+    [ANIMATION_NAME, clip.name],
+    [ANIM_FPS, animFps],
+    [ANIM_DURATION, duration],
+    [ANIM_LOOP_VALUE, clip.loop ? 1 : 0],
+  ]);
+
+  for (const part of rig.parts) {
+    const tracks: TracksByProperty = byPart.get(part.name) ?? {};
+    const nodeIndex = nodeIndexByPart.get(part.name)!;
+    const parentPart: RigPart | undefined = part.parent ? partByName.get(part.parent) : undefined;
+    const parentPivot: Vec2 = parentPart ? parentPart.pivot : [0, 0];
+    // Position/rotation/scale key the part's own Node: a rig parent's Node is genuinely the
+    // spatial parent of this one, so those three cascade down exactly like `ir/matrix.ts`'s
+    // nested `localMatrix` multiplication (Rive computes child world transforms the same way).
+    if (tracks.position || tracks.rotation || tracks.scale) {
+      add(KEYED_OBJECT, [[KEYED_OBJECT_ID, nodeIndex]]);
+      if (tracks.position) {
+        const dx = part.pivot[0] - parentPivot[0];
+        const dy = part.pivot[1] - parentPivot[1];
+        writeDoubleTrack(NODE_X, tracks.position.keys.map((k) => ({ frame: toFrame(k.t), value: dx + k.v[0], ease: k.ease })));
+        writeDoubleTrack(NODE_Y, tracks.position.keys.map((k) => ({ frame: toFrame(k.t), value: dy + k.v[1], ease: k.ease })));
+      }
+      if (tracks.rotation) {
+        writeDoubleTrack(
+          NODE_ROTATION,
+          tracks.rotation.keys.map((k) => ({ frame: toFrame(k.t), value: (k.v * Math.PI) / 180, ease: k.ease })),
+        );
+      }
+      if (tracks.scale) {
+        writeDoubleTrack(NODE_SCALE_X, tracks.scale.keys.map((k) => ({ frame: toFrame(k.t), value: k.v[0], ease: k.ease })));
+        writeDoubleTrack(NODE_SCALE_Y, tracks.scale.keys.map((k) => ({ frame: toFrame(k.t), value: k.v[1], ease: k.ease })));
+      }
+    }
+    // Opacity keys the part's own Shape instead: `ir/sample.ts`'s `sampleClip` gives a part the
+    // opacity of only its OWN track (children do NOT inherit it, mirrored by `export-svg` wrapping
+    // just the shape markup in its own animated `<g>`), but Rive's render opacity cascades down
+    // every `TransformComponent`'s parent chain (`transform_component.cpp`); keying the Shape (a
+    // `Node` subclass with its own opacity, parented to but distinct from this part's Node) keeps
+    // that cascade from reaching sibling/child Nodes the way keying the Node itself would.
+    if (tracks.opacity) {
+      const shapeIndex = shapeIndexByPart.get(part.name);
+      if (shapeIndex !== undefined) {
+        add(KEYED_OBJECT, [[KEYED_OBJECT_ID, shapeIndex]]);
+        writeDoubleTrack(NODE_OPACITY, tracks.opacity.keys.map((k) => ({ frame: toFrame(k.t), value: k.v, ease: k.ease })));
+      }
+    }
   }
 
   return w.toBytes();
