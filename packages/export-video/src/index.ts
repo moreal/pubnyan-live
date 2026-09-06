@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { exportSvg } from '#export-svg/index.ts';
 import type { Clip, Rig } from '#ir/types.ts';
-import type { Renderer } from '#verify/renderer.ts';
+import type { Renderer } from '#render/renderer.ts';
 
 /**
  * Sample times for a clip at its own fps: `round(duration * fps)` evenly spaced frames covering

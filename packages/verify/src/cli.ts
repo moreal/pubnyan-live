@@ -8,7 +8,7 @@ import { contactSheet } from '#verify/contact-sheet.ts';
 import { bundledClipNames, checkDotlottieBundle, machineInputNames } from '#verify/dotlottie-check.ts';
 import { fixtureClips } from '#verify/fixtures/clips.ts';
 import { checkParity, sampleTimes } from '#verify/parity.ts';
-import { Renderer } from '#verify/renderer.ts';
+import { Renderer } from '#render/renderer.ts';
 import { TARGETS } from '#verify/targets/index.ts';
 
 const ROOT = new URL('../../../', import.meta.url).pathname;

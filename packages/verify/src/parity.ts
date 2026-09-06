@@ -3,7 +3,7 @@ import { PNG } from 'pngjs';
 import type { Clip, Rig } from '#ir/types.ts';
 import { PARITY_MAX_RATIO, PIXEL_THRESHOLD } from '#verify/config.ts';
 import { referenceFrame } from '#verify/reference.ts';
-import type { Renderer } from '#verify/renderer.ts';
+import type { Renderer } from '#render/renderer.ts';
 
 export interface Target {
   name: string;

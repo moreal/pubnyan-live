@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, expect, test } from 'vitest';
 import { exportRiveSpike } from '#export-rive/index.ts';
 import { checkRiveFile } from '#export-rive/rive-check.ts';
-import { Renderer } from '#verify/renderer.ts';
+import { Renderer } from '#render/renderer.ts';
 
 let renderer: Renderer;
 beforeAll(async () => {

@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { afterAll, beforeAll, expect, test } from 'vitest';
 import { clips, getRig, machine } from '#motion/index.ts';
 import { exportRiveMachine } from '#export-rive/machine.ts';
-import { Renderer } from '#verify/renderer.ts';
+import { Renderer } from '#render/renderer.ts';
 
 const RIVE_CANVAS_JS = new URL('../../../node_modules/@rive-app/canvas/rive.js', import.meta.url).pathname;
 const RIVE_CANVAS_WASM = new URL('../../../node_modules/@rive-app/canvas/rive.wasm', import.meta.url).pathname;

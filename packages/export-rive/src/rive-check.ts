@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import type { Renderer } from '#verify/renderer.ts';
+import type { Renderer } from '#render/renderer.ts';
 
 const RIVE_CANVAS_JS = new URL('../../../node_modules/@rive-app/canvas/rive.js', import.meta.url).pathname;
 const RIVE_CANVAS_WASM = new URL('../../../node_modules/@rive-app/canvas/rive.wasm', import.meta.url).pathname;

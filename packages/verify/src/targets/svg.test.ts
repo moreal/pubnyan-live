@@ -2,7 +2,7 @@ import { afterAll, beforeAll, expect, test } from 'vitest';
 import { clips, getRig } from '#motion/index.ts';
 import { fixtureClips } from '#verify/fixtures/clips.ts';
 import { checkParity } from '#verify/parity.ts';
-import { Renderer } from '#verify/renderer.ts';
+import { Renderer } from '#render/renderer.ts';
 import { svgTarget } from '#verify/targets/svg.ts';
 
 let renderer: Renderer;

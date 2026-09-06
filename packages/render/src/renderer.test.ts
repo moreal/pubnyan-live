@@ -1,6 +1,6 @@
 import { PNG } from 'pngjs';
 import { afterAll, beforeAll, expect, test } from 'vitest';
-import { Renderer } from '#verify/renderer.ts';
+import { Renderer } from '#render/renderer.ts';
 
 let renderer: Renderer;
 beforeAll(async () => {
