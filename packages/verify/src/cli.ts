@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { exportLottieBundle } from '#export-lottie/bundle.ts';
+import { exportVideo } from '#export-video/index.ts';
 import { writeSvgManifest } from '#export-svg/manifest.ts';
 import { clips, getRig, machine } from '#motion/index.ts';
 import { contactSheet } from '#verify/contact-sheet.ts';
@@ -38,6 +39,12 @@ try {
       console.log(`${status} ${clip.name} / ${target.name}: worst ${(result.worst.ratio * 100).toFixed(3)}% at t=${result.worst.t}s${skipNote}`);
     }
     await writeFile(join(VERIFY_DIR, `${clip.name}-contact.png`), await contactSheet(renderer, times, rows));
+  }
+
+  // Not a parity target: no reference to diff against, just render mp4/webp/gif for each clip.
+  for (const clip of clips) {
+    const files = await exportVideo(renderer, getRig(clip.rig), clip, join(DIST, 'video'));
+    console.log(`wrote ${files.map((f) => f.replace(DIST, 'dist')).join(', ')}`);
   }
 
   // The .lottie bundle isn't a per-clip parity target: load the real bytes with dotlottie-web
