@@ -62,3 +62,14 @@ test('splitSubpaths resets the cursor to the subpath start after Z before applyi
   expect(subs).toHaveLength(1);
   expect(subs[0].d).toBe('M0 0L10 0L10 10ZL5 0L5 5Z');
 });
+
+// Q must be lowered to an equivalent cubic (rig path data allows only M/L/C/Z), not dropped.
+test('splitSubpaths lowers Q quadratics to equivalent C cubics', () => {
+  const subs = splitSubpaths('M0 0Q10 10 20 0Z');
+  expect(subs).toHaveLength(1);
+  expect(subs[0].d).toBe('M0 0C6.666666666666666 6.666666666666666 13.333333333333334 6.666666666666666 20 0Z');
+});
+
+test('splitSubpaths throws naming the offending command and path id for unsupported commands', () => {
+  expect(() => splitSubpaths('M0 0A5 5 0 0 1 10 10Z', 'weird-path')).toThrow(/"A".*"weird-path"/);
+});
