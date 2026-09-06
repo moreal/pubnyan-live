@@ -31,7 +31,7 @@ jobs:
         with: { node-version: 26 }
       - run: npm ci
       - run: git config user.name "pubnyan-agent" && git config user.email "agent@users.noreply.github.com"
-      - run: npm run agent -- "${MAX:-1}"
+      - run: npm run agent -- --max "${MAX:-1}"
         env:
           MAX: ${{ inputs.max }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
