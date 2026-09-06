@@ -38,7 +38,8 @@ export function readSourceSvg(xml: string): SourcePath[] {
     let p = svgpath(d);
     for (const tf of transforms) p = p.transform(tf);
     const absolute = p.abs().unshort().unarc().round(2).toString();
-    out.push({ id: el.getAttribute('id') ?? `path-${i}`, fill: readFill(el), subpaths: splitSubpaths(absolute) });
+    const id = el.getAttribute('id') ?? `path-${i}`;
+    out.push({ id, fill: readFill(el), subpaths: splitSubpaths(absolute, id) });
   }
   return out;
 }
@@ -87,8 +88,27 @@ function readFill(el: Element): string {
   return normalizeColor(fill);
 }
 
-/** Splits absolute path data on M, closes each subpath, drops zero-area artifacts. Converts H/V to L (rig paths use only M/L/C/Z). */
-export function splitSubpaths(d: string): SourceSubpath[] {
+/** Lowers a quadratic Bezier control point to the two cubic control points spanning the same curve. */
+function quadToCubic(
+  sx: number,
+  sy: number,
+  qx: number,
+  qy: number,
+  ex: number,
+  ey: number,
+): [number, number, number, number, number, number] {
+  return [
+    sx + (2 / 3) * (qx - sx),
+    sy + (2 / 3) * (qy - sy),
+    ex + (2 / 3) * (qx - ex),
+    ey + (2 / 3) * (qy - ey),
+    ex,
+    ey,
+  ];
+}
+
+/** Splits absolute path data on M, closes each subpath, drops zero-area artifacts. Converts H/V to L and Q to C (rig paths use only M/L/C/Z). */
+export function splitSubpaths(d: string, pathId = ''): SourceSubpath[] {
   const groups: string[][] = [];
   let cx = 0;
   let cy = 0;
@@ -106,6 +126,17 @@ export function splitSubpaths(d: string): SourceSubpath[] {
       cy = args[0];
       text = `L${cx} ${cy}`;
       cmd = 'L';
+    } else if (cmd === 'Q') {
+      const [qx, qy, ex, ey] = args;
+      const [c1x, c1y, c2x, c2y, endX, endY] = quadToCubic(cx, cy, qx, qy, ex, ey);
+      text = `C${c1x} ${c1y} ${c2x} ${c2y} ${endX} ${endY}`;
+      cmd = 'C';
+      cx = endX;
+      cy = endY;
+    } else if (cmd !== 'M' && cmd !== 'L' && cmd !== 'C' && cmd !== 'Z' && cmd !== 'z') {
+      throw new Error(
+        `svg-source: unsupported path command "${seg[0]}" in path "${pathId}"; only M/L/H/V/C/Q/Z are lowered`,
+      );
     } else {
       text = seg[0] + args.join(' ');
       if (cmd === 'M') {
