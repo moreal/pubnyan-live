@@ -8,9 +8,11 @@ const RIVE_CANVAS_WASM = new URL('../../../../node_modules/@rive-app/canvas/rive
 
 export const riveTarget: Target = {
   name: 'rive',
-  // Rig-shapes exporter only (backlog "rig shapes" item): no clip animation is baked in yet, so
-  // only t=0 (the rest pose) is expected to match the reference. "linear animations" widens this.
-  supportsTime: (_clip, t) => t === 0,
+  // Transform tracks (position/rotation/scale/opacity) are keyframed as a `LinearAnimation`
+  // (backlog "linear animations"), so any clip built only from those matches at every sampled
+  // time. Shape tracks are not yet keyframed (backlog "shape keyframes"): a clip that animates one
+  // only matches at t=0, where the exporter already bakes in the first key's expression.
+  supportsTime: (clip, t) => t === 0 || !clip.tracks.some((track) => track.property === 'shape'),
   async export(rig, clip, outDir) {
     await mkdir(outDir, { recursive: true });
     const file = join(outDir, `${clip.name}.riv`);
@@ -43,18 +45,23 @@ export const riveTarget: Target = {
       // computes each object's world transform while the runtime's own render loop calls
       // `Artboard::advance`, so a `drawFrame()` before that first advance draws every shape at
       // its uninitialized (zero) transform, i.e. a blank canvas. Two rAF ticks guarantee at
-      // least one full advance-and-draw has happened before `pause()` freezes it for the shot.',
+      // least one full advance-and-draw has happened before `r.scrub()` runs.',
       '      autoplay: true,',
       '      onLoad: () => {',
       '        requestAnimationFrame(() => requestAnimationFrame(() => {',
-      // No `LinearAnimation` is baked into the file yet (backlog: "linear animations"), so this
-      // has nothing to scrub yet; the artboard already draws its rest pose, which is what a t=0
-      // static frame needs.
+      // `r.scrub()` only records the target time on the animation instance (`scrubTo`); the
+      // instance isn't actually advanced and applied to the artboard until the runtime's own
+      // still-running (`autoplay`) render loop next ticks — `r.drawFrame()` right after `scrub()`
+      // is a no-op here since a frame is already scheduled. Calling `r.pause()` in the same turn
+      // stops future ticks but not this pending one, so one more rAF is needed before pausing:
+      // otherwise `pause()` freezes the artboard at its pre-scrub (rest) pose, one tick too early.
       '          try {',
       `            r.scrub(${JSON.stringify(clip.name)}, ${t});`,
       '          } catch (e) { /* no such animation yet: the rest pose is already drawn */ }',
-      '          r.pause();',
-      '          window.__ready = true;',
+      '          requestAnimationFrame(() => {',
+      '            r.pause();',
+      '            window.__ready = true;',
+      '          });',
       '        }));',
       '      },',
       '      onLoadError: (e) => {',
