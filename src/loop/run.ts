@@ -84,6 +84,7 @@ export async function runLoop(o: LoopOptions): Promise<LoopResult> {
 
     const item = await claimNext(sh, workRoot);
     if (!item) {
+      if (o.max !== null) return { completed, failed, reason: 'backlog empty' };
       log(`backlog empty, sleeping ${Math.round(o.pollMs / 1000)}s`);
       await sleep(o.pollMs);
       continue;

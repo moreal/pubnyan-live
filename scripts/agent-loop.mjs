@@ -59,7 +59,7 @@ try {
     signal: ac.signal,
   });
   console.log(`[agent-loop] ${r.reason}; completed ${r.completed}, failed ${r.failed}`);
-  process.exit(r.reason.startsWith('reached max') || r.reason === 'stopped' ? 0 : 1);
+  process.exit(r.reason.startsWith('reached max') || r.reason === 'stopped' || r.reason === 'backlog empty' ? 0 : 1);
 } catch (err) {
   console.error(`[agent-loop] error: ${err.message}`);
   process.exit(1);

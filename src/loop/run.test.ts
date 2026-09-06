@@ -115,6 +115,15 @@ test('stops after three consecutive failures', async () => {
   expect(r).toEqual({ completed: 0, failed: 3, reason: '3 consecutive failures' });
 });
 
+test('stops immediately on an empty backlog when max is set, without sleeping', async () => {
+  await writeFile(join(repo, 'docs', 'backlog.md'), '# Backlog\n\n## Section\n\n- [x] **Old.** done\n');
+  await git(execSh, repo, 'commit', '-q', '-am', 'empty');
+  let sleeps = 0;
+  const r = await runLoop({ ...base(fakeDirector([])), max: 1, sleep: async () => { sleeps++; } });
+  expect(r).toEqual({ completed: 0, failed: 0, reason: 'backlog empty' });
+  expect(sleeps).toBe(0);
+});
+
 test('refuses a dirty work tree', async () => {
   const r0 = await runLoop({ ...base(fakeDirector([])), max: 0 });
   expect(r0.reason).toBe('reached max 0');
