@@ -46,7 +46,7 @@ Worker rules:
 - The loop (not the model) claims: flips the first `[ ]` to `[~]` and commits `chore(backlog): claim <title>` on `agent/backlog`, then spawns the Director.
 - On `DONE:` the Director's `mark_done` has already flipped `[~]` to `[x]` inside the item's own commit (unchanged behavior).
 - On `FAILED:`, a non-zero exit, a timeout, or a reply that breaks the contract: the loop stashes any dirty tree as `failed: <title>`, flips `[~]` to `[!]` with the reason, commits `chore(backlog): fail <title>`, and continues.
-- At loop start with a clean tree, any `[~]` is an orphan from a dead run: flip it back to `[ ]`, commit `chore(backlog): unclaim <title>`, continue. With a dirty tree the loop refuses to start, as today.
+- At the start of every iteration with a clean tree, any `[~]` is an orphan (a dead run, or a stale claim merged in from `main`): flip it back to `[ ]`, commit `chore(backlog): unclaim <title>`, continue. With a dirty tree the loop refuses to continue, as today. (Implemented per iteration rather than only at start-up; the per-iteration form also catches stale claims that arrive through the merge from `main`.)
 
 Planner rules:
 
