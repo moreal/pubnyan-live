@@ -28,6 +28,7 @@ Committing:
 - `npx flue run src/agents/director.ts -m next --id pubnyan` — run the director once.
 - `npm run agent` — worker loop, forever, in `.worktrees/agent` on `agent/backlog`; `npm run agent -- --max 1` for one item; `--no-worktree` to run in this checkout (CI).
 - `npm run plan -- <topic> "<message>"` — talk to the Planner; reuse the topic to continue the conversation.
+- `npm run backlog:add` — add backlog items without a Planner conversation. Reads `{"summary": ..., "ops": [...]}` (the exact `write_backlog` input shape) as JSON from a file argument or stdin, runs it through the same `writeBacklog` checks (branch, dirty file, duplicate titles, `Done when:`, ...), and prints the resulting sha or the rejection errors: `echo '{"summary":"...","ops":[...]}' | npm run -s backlog:add`.
 
 ## The agent loop
 
