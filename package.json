@@ -11,6 +11,7 @@
     "#export-svg/*": "./packages/export-svg/src/*",
     "#export-lottie/*": "./packages/export-lottie/src/*",
     "#export-rive/*": "./packages/export-rive/src/*",
+    "#export-video/*": "./packages/export-video/src/*",
     "#verify/*": "./packages/verify/src/*",
     "#motion/*": "./motion/*",
     "#rig/*": "./rig/*"
@@ -23,6 +24,7 @@
     "export:svg": "node packages/export-svg/src/cli.ts",
     "export:lottie": "node packages/export-lottie/src/cli.ts",
     "export:rive": "node packages/export-rive/src/cli.ts",
+    "export:video": "node packages/export-video/src/cli.ts",
     "verify": "node packages/verify/src/cli.ts",
     "check": "npm run check:types && npm test && npm run verify",
     "agent": "node scripts/agent-loop.mjs"
