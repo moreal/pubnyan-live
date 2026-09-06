@@ -24,8 +24,8 @@ export const execSh: Sh = (cmd, args, opts = {}) =>
     let stdout = '';
     let stderr = '';
     let timedOut = false;
-    child.stdout.setEncoding('utf8').on('data', (d: string) => (stdout += d));
-    child.stderr.setEncoding('utf8').on('data', (d: string) => (stderr += d));
+    child.stdout.setEncoding('utf8').on('data', (d: string) => (stdout += d)).on('error', (err: Error) => (stderr += err.message));
+    child.stderr.setEncoding('utf8').on('data', (d: string) => (stderr += d)).on('error', (err: Error) => (stderr += err.message));
     const timer = opts.timeoutMs
       ? setTimeout(() => {
           timedOut = true;

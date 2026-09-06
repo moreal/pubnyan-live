@@ -21,6 +21,14 @@ test('execSh reports a timeout instead of hanging', async () => {
   expect(r.exitCode).not.toBe(0);
 });
 
+test('execSh resolves with exitCode 130 when aborted, without rejecting or setting timedOut', async () => {
+  const ac = new AbortController();
+  setTimeout(() => ac.abort(), 100);
+  const r = await execSh('sh', ['-c', 'exec sleep 5'], { signal: ac.signal });
+  expect(r.exitCode).toBe(130);
+  expect(r.timedOut).toBe(false);
+});
+
 test('git helper returns trimmed stdout and throws with stderr on failure', async () => {
   dir = await mkdtemp(join(tmpdir(), 'sh-'));
   await execSh('git', ['init', '-q', '-b', 'main'], { cwd: dir });
