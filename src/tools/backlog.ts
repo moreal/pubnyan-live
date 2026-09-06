@@ -2,22 +2,22 @@ import { defineTool } from '@flue/runtime';
 import type { JsonValue } from '@flue/runtime';
 import { join } from 'node:path';
 import * as v from 'valibot';
-import { REPO_ROOT } from '../root.ts';
-import { countItems, firstOpenItem, markDone } from './backlog-file.ts';
+import { WORK_ROOT } from '../root.ts';
+import { countItems, findItem, firstItem, setState } from './backlog-file.ts';
 
-export const BACKLOG_PATH = join(REPO_ROOT, 'docs', 'backlog.md');
+export const BACKLOG_PATH = join(WORK_ROOT, 'docs', 'backlog.md');
 
 export const readBacklog = defineTool({
   name: 'read_backlog',
-  description: 'Return the first unchecked item of docs/backlog.md (title, full text, section, 1-based line) and the open/done counts. item is null when the backlog is empty.',
+  description: 'Return the backlog item currently claimed for you (marked `- [~]` in docs/backlog.md): title, full text, section. item is null when nothing is claimed. Also returns the counts per state.',
   harness: true,
   async run({ harness }): Promise<{ output: JsonValue }> {
     const md = await harness.sandbox.readFile(BACKLOG_PATH);
-    const item = firstOpenItem(md);
+    const item = firstItem(md, 'claimed');
     return {
       output: {
-        item: item ? { line: item.line, title: item.title, text: item.text, section: item.section } : null,
-        ...countItems(md),
+        item: item ? { title: item.title, text: item.text, section: item.section } : null,
+        counts: countItems(md),
       },
     };
   },
@@ -25,15 +25,15 @@ export const readBacklog = defineTool({
 
 export const markDoneTool = defineTool({
   name: 'mark_done',
-  description: 'Check off the open backlog item at the given 1-based line of docs/backlog.md. Call after the reviewer passed the item. Idempotent and safe to call again (for example after a later git_commit refusal): calling it on a line that is already checked is a no-op.',
-  input: v.object({ line: v.pipe(v.number(), v.integer(), v.minValue(1)) }),
+  description: 'Mark the backlog item with this exact title done (`- [x]`) in docs/backlog.md. Call after the reviewer passed the item. Idempotent: calling it on an item that is already done is a no-op.',
+  input: v.object({ title: v.pipe(v.string(), v.minLength(1)) }),
   harness: true,
-  async run({ data, harness }) {
+  async run({ data, harness }): Promise<{ output: JsonValue }> {
     const md = await harness.sandbox.readFile(BACKLOG_PATH);
-    const item = firstOpenItem(md);
-    const next = markDone(md, data.line);
-    const alreadyDone = next === md;
-    if (!alreadyDone) await harness.sandbox.writeFile(BACKLOG_PATH, next);
-    return { output: { ok: true, title: item?.line === data.line ? item.title : `line ${data.line}`, alreadyDone } };
+    const item = findItem(md, data.title);
+    if (!item) return { output: { ok: false, error: `no backlog item titled "${data.title}"` } };
+    const alreadyDone = item.state === 'done';
+    if (!alreadyDone) await harness.sandbox.writeFile(BACKLOG_PATH, setState(md, data.title, 'done'));
+    return { output: { ok: true, title: item.title, alreadyDone } };
   },
 });

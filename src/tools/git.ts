@@ -1,7 +1,7 @@
 import { defineTool } from '@flue/runtime';
 import type { JsonValue } from '@flue/runtime';
 import * as v from 'valibot';
-import { REPO_ROOT } from '../root.ts';
+import { WORK_ROOT } from '../root.ts';
 import { summarizeCheckOutput } from './checks.ts';
 import { computeTreeHash, readCachedTreeHash, shellQuote, writeCachedTreeHash } from './tree-hash.ts';
 
@@ -14,7 +14,7 @@ export const gitCommit = defineTool({
   input: v.object({ message: v.pipe(v.string(), v.minLength(10)) }),
   harness: true,
   async run({ data, harness }): Promise<{ output: JsonValue }> {
-    const sh = (cmd: string, timeoutMs = 60_000) => harness.sandbox.exec(cmd, { cwd: REPO_ROOT, timeoutMs });
+    const sh = (cmd: string, timeoutMs = 60_000) => harness.sandbox.exec(cmd, { cwd: WORK_ROOT, timeoutMs });
     const status = await sh('git status --porcelain');
     if (status.stdout.trim() === '') return { output: { ok: false, error: 'nothing to commit' } };
 
