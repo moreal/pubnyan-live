@@ -3,11 +3,10 @@ import type { JsonValue } from '@flue/runtime';
 import * as v from 'valibot';
 import { REPO_ROOT } from '../root.ts';
 import { summarizeCheckOutput } from './checks.ts';
+import { computeTreeHash, readCachedTreeHash, shellQuote, writeCachedTreeHash } from './tree-hash.ts';
 
 export const AGENT_BRANCH = 'agent/backlog';
-
-/** Single-quote a string for POSIX sh. */
-export const shellQuote = (s: string): string => `'${s.replace(/'/g, `'\\''`)}'`;
+export { shellQuote };
 
 export const gitCommit = defineTool({
   name: 'git_commit',
@@ -18,9 +17,17 @@ export const gitCommit = defineTool({
     const sh = (cmd: string, timeoutMs = 60_000) => harness.sandbox.exec(cmd, { cwd: REPO_ROOT, timeoutMs });
     const status = await sh('git status --porcelain');
     if (status.stdout.trim() === '') return { output: { ok: false, error: 'nothing to commit' } };
-    const check = await sh('npm run check', 900_000);
-    if (check.exitCode !== 0) {
-      return { output: { ok: false, error: `check suite failed (exit ${check.exitCode}); fix it before committing`, tail: summarizeCheckOutput(`${check.stdout}\n${check.stderr}`) } };
+
+    // run_checks may have already verified this exact tree; skip the redundant `npm run check`
+    // if the tree has not changed since.
+    const treeHash = await computeTreeHash(sh);
+    const cachedHash = await readCachedTreeHash();
+    if (treeHash !== cachedHash) {
+      const check = await sh('npm run check', 900_000);
+      if (check.exitCode !== 0) {
+        return { output: { ok: false, error: `check suite failed (exit ${check.exitCode}); fix it before committing`, tail: summarizeCheckOutput(`${check.stdout}\n${check.stderr}`) } };
+      }
+      await writeCachedTreeHash(treeHash);
     }
     const current = (await sh('git branch --show-current')).stdout.trim();
     if (current !== AGENT_BRANCH) {
