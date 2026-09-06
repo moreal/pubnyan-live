@@ -74,3 +74,63 @@ export async function syncFromMain(sh: Sh, workRoot: string): Promise<void> {
   await sh('git', ['merge', '--abort'], { cwd: workRoot });
   throw new Error(`merge conflict with main: ${conflicts.split('\n').join(', ') || (r.stderr || r.stdout).trim()}`);
 }
+
+export interface ClaimedItem {
+  title: string;
+  text: string;
+  section: string;
+}
+
+async function readBacklog(workRoot: string): Promise<string> {
+  return readFile(join(workRoot, BACKLOG), 'utf8');
+}
+
+async function commitBacklog(sh: Sh, workRoot: string, md: string, message: string): Promise<void> {
+  await writeFile(join(workRoot, BACKLOG), md);
+  await git(sh, workRoot, 'add', BACKLOG);
+  await git(sh, workRoot, 'commit', '-q', '-m', message);
+}
+
+/** A `[~]` at loop start is a claim left by a dead run: put those items back to `[ ]` and commit. */
+export async function recoverOrphans(sh: Sh, workRoot: string): Promise<string[]> {
+  let md = await readBacklog(workRoot);
+  const titles = parseItems(md).filter((it) => it.state === 'claimed').map((it) => it.title);
+  if (titles.length === 0) return [];
+  for (const title of titles) md = setState(md, title, 'open');
+  await commitBacklog(sh, workRoot, md, `chore(backlog): unclaim ${titles.join(', ')}`);
+  return titles;
+}
+
+/** Flip the first `[ ]` item to `[~]` and commit the claim. Returns null when nothing is open. */
+export async function claimNext(sh: Sh, workRoot: string): Promise<ClaimedItem | null> {
+  const md = await readBacklog(workRoot);
+  const item = firstItem(md, 'open');
+  if (!item) return null;
+  await commitBacklog(sh, workRoot, setState(md, item.title, 'claimed'), `chore(backlog): claim ${item.title}`);
+  return { title: item.title, text: item.text, section: item.section };
+}
+
+/** Stash whatever the failed run left behind, mark the item `[!]` with the reason, and commit. */
+export async function markFailed(sh: Sh, workRoot: string, title: string, reason: string, date?: string): Promise<{ stashed: boolean }> {
+  const dirty = (await git(sh, workRoot, 'status', '--porcelain')) !== '';
+  if (dirty) await git(sh, workRoot, 'stash', 'push', '-u', '-q', '-m', `failed: ${title}`);
+  const md = await readBacklog(workRoot);
+  await commitBacklog(sh, workRoot, setState(md, title, 'failed', { reason, date }), `chore(backlog): fail ${title}`);
+  return { stashed: dirty };
+}
+
+/** Run the Director once for the claimed item, inside `workRoot`, and classify its reply. */
+export async function runDirector(
+  sh: Sh,
+  workRoot: string,
+  opts: { env: NodeJS.ProcessEnv; timeoutMs: number; signal?: AbortSignal; id?: string },
+): Promise<DirectorOutcome> {
+  const id = opts.id ?? `pubnyan-${Date.now()}`;
+  const r = await sh('npx', ['flue', 'run', 'src/agents/director.ts', '-m', 'next', '--id', id], {
+    cwd: workRoot,
+    env: { ...opts.env, PUBNYAN_ROOT: workRoot },
+    timeoutMs: opts.timeoutMs,
+    signal: opts.signal,
+  });
+  return parseDirectorReply(r);
+}

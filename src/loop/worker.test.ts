@@ -4,7 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { execSh, git } from './sh.ts';
-import { AGENT_BRANCH, ensureBranch, ensureWorktree, parseDirectorReply, syncFromMain } from './worker.ts';
+import type { Sh } from './sh.ts';
+import { AGENT_BRANCH, claimNext, ensureBranch, ensureWorktree, markFailed, parseDirectorReply, recoverOrphans, runDirector, syncFromMain } from './worker.ts';
 
 const BACKLOG = `# Backlog
 
@@ -103,5 +104,71 @@ describe('syncFromMain', () => {
     await commitAll('planner edit');
     await expect(syncFromMain(execSh, path)).rejects.toThrow(/merge conflict with main: docs\/backlog\.md/);
     expect(await git(execSh, path, 'status', '--porcelain')).toBe('');
+  });
+});
+
+describe('claim / recover / fail', () => {
+  test('claimNext flips the first open item and commits the claim', async () => {
+    await ensureBranch(execSh, repo);
+    const item = await claimNext(execSh, repo);
+    expect(item).toEqual({ title: 'First.', text: '**First.** Do it. Done when: done.', section: 'Section' });
+    expect(await g('log', '-1', '--format=%s')).toBe('chore(backlog): claim First.');
+    expect(await g('status', '--porcelain')).toBe('');
+    expect(await readFile(join(repo, 'docs', 'backlog.md'), 'utf8')).toContain('- [~] **First.**');
+  });
+
+  test('claimNext returns null when nothing is open', async () => {
+    await writeFile(join(repo, 'docs', 'backlog.md'), '- [x] **Only.** done\n');
+    await commitAll('all done');
+    expect(await claimNext(execSh, repo)).toBeNull();
+  });
+
+  test('recoverOrphans unclaims every claimed item in one commit', async () => {
+    await writeFile(join(repo, 'docs', 'backlog.md'), BACKLOG.replace('- [ ] **First.**', '- [~] **First.**').replace('- [ ] **Second.**', '- [~] **Second.**'));
+    await commitAll('two stale claims');
+    expect(await recoverOrphans(execSh, repo)).toEqual(['First.', 'Second.']);
+    expect(await g('log', '-1', '--format=%s')).toBe('chore(backlog): unclaim First., Second.');
+    expect(await readFile(join(repo, 'docs', 'backlog.md'), 'utf8')).toBe(BACKLOG);
+    expect(await recoverOrphans(execSh, repo)).toEqual([]);
+  });
+
+  test('markFailed stashes a dirty tree, marks the item, and commits', async () => {
+    await ensureBranch(execSh, repo);
+    await claimNext(execSh, repo);
+    await writeFile(join(repo, 'scratch.txt'), 'half-done work');
+    const r = await markFailed(execSh, repo, 'First.', 'reviewer never passed', '2026-09-06');
+    expect(r.stashed).toBe(true);
+    expect(await g('status', '--porcelain')).toBe('');
+    expect(await g('stash', 'list')).toMatch(/failed: First\./);
+    expect(await g('log', '-1', '--format=%s')).toBe('chore(backlog): fail First.');
+    const md = await readFile(join(repo, 'docs', 'backlog.md'), 'utf8');
+    expect(md).toContain('- [!] **First.** Do it. Done when: done.\n  - failed 2026-09-06: reviewer never passed\n');
+  });
+
+  test('markFailed with a clean tree does not stash', async () => {
+    await ensureBranch(execSh, repo);
+    await claimNext(execSh, repo);
+    expect((await markFailed(execSh, repo, 'First.', 'timed out')).stashed).toBe(false);
+  });
+});
+
+describe('runDirector', () => {
+  test('spawns flue run in the work root with PUBNYAN_ROOT and parses the reply', async () => {
+    const calls: { cmd: string; args: string[]; cwd?: string; env?: NodeJS.ProcessEnv; timeoutMs?: number }[] = [];
+    const fake: Sh = async (cmd, args, opts = {}) => {
+      calls.push({ cmd, args, cwd: opts.cwd, env: opts.env, timeoutMs: opts.timeoutMs });
+      return { stdout: 'DONE: First. (abc1234)\n', stderr: '', exitCode: 0, timedOut: false };
+    };
+    const out = await runDirector(fake, '/work', { env: { ANTHROPIC_API_KEY: 'k' }, timeoutMs: 1000, id: 'pubnyan-1' });
+    expect(out).toEqual({ kind: 'done', title: 'First.', sha: 'abc1234' });
+    expect(calls).toEqual([
+      {
+        cmd: 'npx',
+        args: ['flue', 'run', 'src/agents/director.ts', '-m', 'next', '--id', 'pubnyan-1'],
+        cwd: '/work',
+        env: { ANTHROPIC_API_KEY: 'k', PUBNYAN_ROOT: '/work' },
+        timeoutMs: 1000,
+      },
+    ]);
   });
 });
