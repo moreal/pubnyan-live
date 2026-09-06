@@ -2,8 +2,9 @@ import { chmod, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, test } from 'vitest';
+import * as v from 'valibot';
 import { execSh, git } from '../loop/sh.ts';
-import { readBacklogDoc, writeBacklog, type PlannerFs } from './backlog-planner.ts';
+import { claimedOnAgentBranch, opSchema, readBacklogDoc, writeBacklog, type PlannerFs } from './backlog-planner.ts';
 
 const BACKLOG = `# Backlog
 
@@ -91,8 +92,30 @@ test('writeBacklog restores docs/backlog.md when the commit fails', async () => 
 });
 
 test('writeBacklog refuses a multi-line summary before running any git command', async () => {
-  const r = await writeBacklog(fs, path, [{ op: 'remove', title: 'Two.' }], 'first line\nsecond line');
+  const calls: string[] = [];
+  const spyFs: PlannerFs = { ...fs, exec: (cmd) => { calls.push(cmd); return fs.exec(cmd); } };
+  const r = await writeBacklog(spyFs, path, [{ op: 'remove', title: 'Two.' }], 'first line\nsecond line');
   expect(r).toEqual({ ok: false, error: 'summary must be a single line' });
   expect(await fs.readFile(path)).toBe(BACKLOG);
   expect(await git(execSh, repo, 'status', '--porcelain')).toBe('');
+  expect(calls).toEqual([]);
+});
+
+test('the insert and replace op schemas reject a multi-line text', () => {
+  const insert = v.safeParse(opSchema, { op: 'insert', title: 'Three.', text: 'line one\nline two', section: 'Section' });
+  expect(insert.success).toBe(false);
+  const replace = v.safeParse(opSchema, { op: 'replace', title: 'One.', text: 'line one\nline two' });
+  expect(replace.success).toBe(false);
+  const ok = v.safeParse(opSchema, { op: 'insert', title: 'Three.', text: 'Third. Done when: three.', section: 'Section' });
+  expect(ok.success).toBe(true);
+});
+
+test('claimedOnAgentBranch throws on a git failure that is not a missing ref', async () => {
+  const failing: PlannerFs = { ...fs, exec: async () => ({ stdout: '', stderr: 'fatal: unable to read tree', exitCode: 128 }) };
+  await expect(claimedOnAgentBranch(failing)).rejects.toThrow(/unable to read tree/);
+});
+
+test('claimedOnAgentBranch returns no claims when agent/backlog does not exist', async () => {
+  const noBranch: PlannerFs = { ...fs, exec: async () => ({ stdout: '', stderr: "fatal: invalid object name 'agent/backlog'.", exitCode: 128 }) };
+  expect(await claimedOnAgentBranch(noBranch)).toEqual([]);
 });
