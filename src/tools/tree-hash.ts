@@ -20,9 +20,17 @@ const CACHE_PATH = join(WORK_ROOT, 'data', 'checked-tree');
  * actually staged.
  */
 export async function computeTreeHash(sh: Exec): Promise<string> {
-  const tmp = (await sh('mktemp')).stdout.trim();
+  // `mktemp -u` only picks a name; it must not exist yet. `git add -A` with a
+  // `GIT_INDEX_FILE` that doesn't exist initializes a fresh, valid empty index, whereas an
+  // existing-but-empty file (as `mktemp` alone would create) is rejected by git as "index
+  // file smaller than expected". Resolve the real index via `git rev-parse --git-path index`
+  // instead of a hardcoded `.git/index`, which is wrong inside a linked worktree (`.git` is a
+  // file there, not a directory).
+  const tmp = (await sh('mktemp -u')).stdout.trim();
   try {
-    await sh(`cp .git/index ${shellQuote(tmp)} 2>/dev/null || true`);
+    const gitPath = (await sh('git rev-parse --git-path index')).stdout.trim();
+    const cp = await sh(`cp ${shellQuote(gitPath)} ${shellQuote(tmp)} 2>/dev/null`);
+    if (cp.exitCode !== 0) await sh(`rm -f ${shellQuote(tmp)}`);
     const add = await sh(`GIT_INDEX_FILE=${shellQuote(tmp)} git add -A`);
     if (add.exitCode !== 0) throw new Error(`git add -A failed: ${add.stderr || add.stdout}`);
     const wt = await sh(`GIT_INDEX_FILE=${shellQuote(tmp)} git write-tree`);
