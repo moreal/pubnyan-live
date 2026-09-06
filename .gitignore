@@ -5,3 +5,4 @@ rig/preview/*.png
 rig/inspect/
 .env
 .superpowers/
+.worktrees/
