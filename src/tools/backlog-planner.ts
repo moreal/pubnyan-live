@@ -43,6 +43,7 @@ export async function writeBacklog(
   if (branch !== 'main') return { ok: false, error: `not on main (on ${branch}); the planner commits only on main` };
   const dirty = (await fs.exec('git status --porcelain -- docs/backlog.md')).stdout.trim();
   if (dirty !== '') return { ok: false, error: 'docs/backlog.md has uncommitted changes; commit or discard them first' };
+  if (/[\r\n]/.test(summary)) return { ok: false, error: 'summary must be a single line' };
 
   const md = await fs.readFile(path);
   const result = applyOps(md, ops, await claimedOnAgentBranch(fs));
@@ -50,9 +51,17 @@ export async function writeBacklog(
 
   await fs.writeFile(path, result.md);
   const add = await fs.exec('git add docs/backlog.md');
-  if (add.exitCode !== 0) return { ok: false, error: `git add failed: ${add.stderr}` };
+  if (add.exitCode !== 0) {
+    // Restore both the index and the working tree from HEAD; a plain `git checkout --` would
+    // only restore the working tree from a (possibly already-staged) index.
+    await fs.exec('git checkout HEAD -- docs/backlog.md');
+    return { ok: false, error: `git add failed: ${add.stderr}; docs/backlog.md restored` };
+  }
   const commit = await fs.exec(`git commit -q -m ${shellQuote(`docs(backlog): ${summary}`)} -- docs/backlog.md`);
-  if (commit.exitCode !== 0) return { ok: false, error: `git commit failed: ${commit.stderr || commit.stdout}` };
+  if (commit.exitCode !== 0) {
+    await fs.exec('git checkout HEAD -- docs/backlog.md');
+    return { ok: false, error: `git commit failed: ${commit.stderr || commit.stdout}; docs/backlog.md restored` };
+  }
   const sha = (await fs.exec('git rev-parse --short HEAD')).stdout.trim();
   return { ok: true, sha, titles: ops.map((o) => o.title) };
 }
@@ -85,7 +94,7 @@ export const writeBacklogTool = defineTool({
   name: 'write_backlog',
   description:
     'Apply a list of edits to docs/backlog.md and commit them on main as "docs(backlog): <summary>". Ops: insert {title, text, section, after?}, replace {title, text}, remove {title}, reopen {title}. text is the item body without the bold title and must contain a "Done when:" sentence. All-or-nothing: any rule violation (claimed or done item touched, duplicate title, unknown section, missing Done when) rejects the whole call and writes nothing. Refuses when not on main or when docs/backlog.md has uncommitted changes.',
-  input: v.object({ ops: v.pipe(v.array(opSchema), v.minLength(1)), summary: v.pipe(v.string(), v.minLength(3), v.maxLength(72)) }),
+  input: v.object({ ops: v.pipe(v.array(opSchema), v.minLength(1)), summary: v.pipe(v.string(), v.minLength(3), v.maxLength(72), v.regex(/^[^\r\n]+$/, 'summary must be a single line')) }),
   harness: true,
   async run({ data, harness }): Promise<{ output: JsonValue }> {
     return { output: await writeBacklog(harnessFs(harness), PLANNER_BACKLOG_PATH, data.ops, data.summary) };
