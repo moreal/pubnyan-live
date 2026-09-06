@@ -26,6 +26,38 @@
       "file": "wink.svg"
     },
     {
+      "name": "nod",
+      "rig": "pubnyan",
+      "duration": 0.6,
+      "fps": 30,
+      "loop": false,
+      "file": "nod.svg"
+    },
+    {
+      "name": "tilt",
+      "rig": "pubnyan",
+      "duration": 0.8,
+      "fps": 30,
+      "loop": false,
+      "file": "tilt.svg"
+    },
+    {
+      "name": "ear-twitch",
+      "rig": "pubnyan",
+      "duration": 0.3,
+      "fps": 30,
+      "loop": false,
+      "file": "ear-twitch.svg"
+    },
+    {
+      "name": "tail-flick",
+      "rig": "pubnyan",
+      "duration": 0.4,
+      "fps": 30,
+      "loop": false,
+      "file": "tail-flick.svg"
+    },
+    {
       "name": "expr-angry",
       "rig": "pubnyan",
       "duration": 0.1,

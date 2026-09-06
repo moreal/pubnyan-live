@@ -11,6 +11,10 @@ export default machine({
   inputs: {
     expression: { type: 'enum', values: ['normal', 'angry', 'curious', 'cry', 'shy'], default: 'normal' },
     react: { type: 'trigger' },
+    reactNod: { type: 'trigger' },
+    reactTilt: { type: 'trigger' },
+    reactEarTwitch: { type: 'trigger' },
+    reactTailFlick: { type: 'trigger' },
     loading: { type: 'bool', default: false },
   },
   layers: {
@@ -47,14 +51,24 @@ export default machine({
       ],
     },
     reaction: {
-      // `wink` is the only one-shot clip that exists so far; the dedicated reaction
-      // clips (nod, tilt, ear-twitch, tail-flick) are a separate backlog item.
+      // One-shot reactions, each fired by its own trigger input. All return to `none`
+      // by playing out their clip fully (mode: 'once'), which then holds the rest pose.
       entry: 'none',
       states: {
         none: { clip: null, mode: 'once' },
         wink: { clip: 'wink', mode: 'once' },
+        nod: { clip: 'nod', mode: 'once' },
+        tilt: { clip: 'tilt', mode: 'once' },
+        'ear-twitch': { clip: 'ear-twitch', mode: 'once' },
+        'tail-flick': { clip: 'tail-flick', mode: 'once' },
       },
-      transitions: [{ from: '*', to: 'wink', when: { input: 'react', fired: true }, duration: 0 }],
+      transitions: [
+        { from: '*', to: 'wink', when: { input: 'react', fired: true }, duration: 0 },
+        { from: '*', to: 'nod', when: { input: 'reactNod', fired: true }, duration: 0 },
+        { from: '*', to: 'tilt', when: { input: 'reactTilt', fired: true }, duration: 0 },
+        { from: '*', to: 'ear-twitch', when: { input: 'reactEarTwitch', fired: true }, duration: 0 },
+        { from: '*', to: 'tail-flick', when: { input: 'reactTailFlick', fired: true }, duration: 0 },
+      ],
     },
   },
 });

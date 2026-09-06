@@ -31,7 +31,7 @@ Work queue shared by humans and agents. Top item first. Mark `[x]` in the commit
 ## Animation work (for the agents)
 
 - [x] **Expression transitions.** Clips `to-angry`, `to-curious`, `to-cry`, `to-shy` (0.4 s, non-loop) morphing/crossfading eyes, mouth, face, tears from `normal`, and the reverse clips. Wire them into `motion/machine.ts`'s expression layer.
-- [ ] **Reactions.** One-shot clips `nod` (body position y dip, 0.6 s), `tilt` (body rotation ±6°, 0.8 s), `ear-twitch` (not possible on the fused silhouette: instead a quick body scale-x squash, 0.3 s), `tail-flick` (ring-gap-r quick scale, 0.4 s). Wire into the reaction layer.
+- [x] **Reactions.** One-shot clips `nod` (body position y dip, 0.6 s), `tilt` (body rotation ±6°, 0.8 s), `ear-twitch` (not possible on the fused silhouette: instead a quick body scale-x squash, 0.3 s), `tail-flick` (ring-gap-r quick scale, 0.4 s). Wire into the reaction layer.
 - [ ] **Better morphs.** Redraw eye and mouth expression paths with matching vertex counts in a separate SVG under `rig/overrides/` so `normal <-> angry/curious/shy` morph instead of crossfading; extend `parts.map.json` with an `overrides` source.
 
 ## Maintenance
