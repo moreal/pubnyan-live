@@ -1,6 +1,10 @@
 import { expect, test } from 'vitest';
 import { readSourceSvg, splitSubpaths } from '#rig-extract/svg-source.ts';
 
+const withFill = (fill: string) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <path id="p" ${fill} d="M 0,0 L 10,0 L 10,10 Z"/>
+</svg>`;
+
 const xml = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <defs><clipPath id="c"><path id="clip" d="M0 0H100V100H0Z"/></clipPath></defs>
   <g transform="translate(-10,-20)">
@@ -21,6 +25,22 @@ test('reads paths in world space, splits subpaths, skips clipPaths, drops degene
   ]);
   expect(p2.fill).toBe('#000000');
   expect(p2.subpaths).toEqual([]);
+});
+
+test('readFill parses 3-digit hex, rgb(), rgba() and named colours', () => {
+  expect(readSourceSvg(withFill('fill="#0f0"'))[0]!.fill).toBe('#00ff00');
+  expect(readSourceSvg(withFill('style="fill:rgb(255, 0, 0)"'))[0]!.fill).toBe('#ff0000');
+  expect(readSourceSvg(withFill('style="fill:rgba(0, 0, 255, 0.5)"'))[0]!.fill).toBe('#0000ff');
+  expect(readSourceSvg(withFill('fill="white"'))[0]!.fill).toBe('#ffffff');
+});
+
+test('readFill throws on colours it cannot parse', () => {
+  expect(() => readSourceSvg(withFill('fill="hsl(0, 100%, 50%)"'))).toThrow(/unable to parse fill colour/);
+});
+
+test('readFill throws on "none" and "transparent" rather than silently rendering black', () => {
+  expect(() => readSourceSvg(withFill('fill="none"'))).toThrow(/unable to parse fill colour/);
+  expect(() => readSourceSvg(withFill('fill="transparent"'))).toThrow(/unable to parse fill colour/);
 });
 
 test('splitSubpaths closes open subpaths and keeps curves absolute', () => {
