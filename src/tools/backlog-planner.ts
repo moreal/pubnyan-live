@@ -85,6 +85,12 @@ export const opSchema = v.variant('op', [
   v.object({ op: v.literal('reopen'), title: v.pipe(v.string(), v.minLength(1)) }),
 ]);
 
+/** The exact `write_backlog` input shape, reused by `scripts/backlog-add.mjs` so both paths run the same checks. */
+export const writeBacklogInputSchema = v.object({
+  ops: v.pipe(v.array(opSchema), v.minLength(1)),
+  summary: v.pipe(v.string(), v.minLength(3), v.maxLength(72), v.regex(/^[^\r\n]+$/, 'summary must be a single line')),
+});
+
 function harnessFs(harness: { sandbox: { readFile(p: string): Promise<string>; writeFile(p: string, s: string): Promise<void>; exec(cmd: string, o: { cwd: string; timeoutMs: number }): Promise<{ stdout: string; stderr: string; exitCode: number }> } }): PlannerFs {
   return {
     readFile: (p) => harness.sandbox.readFile(p),
@@ -106,7 +112,7 @@ export const writeBacklogTool = defineTool({
   name: 'write_backlog',
   description:
     'Apply a list of edits to docs/backlog.md and commit them on main as "docs(backlog): <summary>". Ops: insert {title, text, section, after?}, replace {title, text}, remove {title}, reopen {title}. text is the item body without the bold title and must contain a "Done when:" sentence. All-or-nothing: any rule violation (claimed or done item touched, duplicate title, unknown section, missing Done when) rejects the whole call and writes nothing. Refuses when not on main or when docs/backlog.md has uncommitted changes.',
-  input: v.object({ ops: v.pipe(v.array(opSchema), v.minLength(1)), summary: v.pipe(v.string(), v.minLength(3), v.maxLength(72), v.regex(/^[^\r\n]+$/, 'summary must be a single line')) }),
+  input: writeBacklogInputSchema,
   harness: true,
   async run({ data, harness }): Promise<{ output: JsonValue }> {
     return { output: await writeBacklog(harnessFs(harness), PLANNER_BACKLOG_PATH, data.ops, data.summary) };

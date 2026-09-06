@@ -9,9 +9,11 @@
     "verbatimModuleSyntax": true,
     "erasableSyntaxOnly": true,
     "resolveJsonModule": true,
+    "allowJs": true,
+    "checkJs": false,
     "strict": true,
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["packages", "motion", "rig", "src", "flue.config.ts", "vitest.config.ts"]
+  "include": ["packages", "motion", "rig", "src", "scripts", "flue.config.ts", "vitest.config.ts"]
 }

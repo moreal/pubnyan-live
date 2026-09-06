@@ -40,6 +40,10 @@ Placing items: without `after`, an `insert` lands at the end of the section. Pas
 
 Rejections: `write_backlog` is all-or-nothing. When it returns `ok: false`, read `error` and `errors`, fix the ops and call it again — or, if the cause is the branch or a dirty `docs/backlog.md`, tell the person so they can resolve it. Never work around a rejection by editing the file with other tools.
 
+## Without a Planner conversation
+
+A human or a Claude Code session that already knows the ops can skip the conversation and run `npm run backlog:add` instead: it reads the same `{"summary": ..., "ops": [...]}` shape from a file argument or stdin, applies it through `writeBacklog`, and prints the sha or the rejection errors — the same checks as `write_backlog`, including branch and dirty-file guards. Example: `echo '{"summary":"add blink-v2 clip","ops":[{"op":"insert","section":"Animation work (for the agents)","title":"motion/clips: blink-v2.","text":"..."}]}' | npm run -s backlog:add`.
+
 ## Sizing
 
 - If you cannot name the files to change, the item is not ready; investigate first.
