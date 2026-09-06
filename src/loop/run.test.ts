@@ -1,0 +1,112 @@
+// src/loop/run.test.ts
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, expect, test } from 'vitest';
+import { runLoop } from './run.ts';
+import { execSh, git, type Sh } from './sh.ts';
+
+const BACKLOG = `# Backlog
+
+## Section
+
+- [ ] **First.** Do it. Done when: done.
+- [ ] **Second.** Do it too. Done when: done.
+`;
+
+let repo: string;
+beforeEach(async () => {
+  repo = await mkdtemp(join(tmpdir(), 'run-'));
+  await git(execSh, repo, 'init', '-q', '-b', 'main');
+  await git(execSh, repo, 'config', 'user.name', 'test');
+  await git(execSh, repo, 'config', 'user.email', 'test@example.com');
+  await execSh('mkdir', ['-p', join(repo, 'docs')]);
+  await writeFile(join(repo, 'docs', 'backlog.md'), BACKLOG);
+  await writeFile(join(repo, 'package-lock.json'), '{}');
+  await git(execSh, repo, 'add', '-A');
+  await git(execSh, repo, 'commit', '-q', '-m', 'init');
+});
+afterEach(async () => {
+  await rm(repo, { recursive: true, force: true });
+});
+
+/** A Director stand-in: marks the claimed item done and commits, like the real one, then replies. */
+function fakeDirector(script: Array<'done' | 'failed' | 'crash'>): Sh {
+  let i = 0;
+  return async (cmd, args, opts) => {
+    if (cmd !== 'npx') return execSh(cmd, args, opts);
+    const cwd = opts?.cwd ?? repo;
+    const md = await readFile(join(cwd, 'docs', 'backlog.md'), 'utf8');
+    const title = /- \[~\] \*\*(.+?)\*\*/.exec(md)![1];
+    const kind = script[i++] ?? 'crash';
+    if (kind === 'done') {
+      await writeFile(join(cwd, 'docs', 'backlog.md'), md.replace(`- [~] **${title}**`, `- [x] **${title}**`));
+      await git(execSh, cwd, 'commit', '-q', '-am', `feat: ${title}`);
+      const sha = await git(execSh, cwd, 'rev-parse', '--short', 'HEAD');
+      return { stdout: `DONE: ${title} (${sha})\n`, stderr: '', exitCode: 0, timedOut: false };
+    }
+    if (kind === 'failed') return { stdout: `FAILED: ${title}: could not\n`, stderr: '', exitCode: 0, timedOut: false };
+    return { stdout: '', stderr: 'boom', exitCode: 1, timedOut: false };
+  };
+}
+
+const base = (sh: Sh) => ({
+  repoRoot: repo,
+  useWorktree: true,
+  pollMs: 10,
+  directorTimeoutMs: 1000,
+  maxConsecutiveFailures: 3,
+  sh,
+  install: async () => {},
+  resolveEnv: () => ({}),
+  sleep: async () => {},
+  log: () => {},
+});
+
+test('completes items until max, one claim commit and one item commit each', async () => {
+  const r = await runLoop({ ...base(fakeDirector(['done', 'done'])), max: 2 });
+  expect(r).toEqual({ completed: 2, failed: 0, reason: 'reached max 2' });
+  const work = join(repo, '.worktrees', 'agent');
+  const log = await git(execSh, work, 'log', '--format=%s');
+  expect(log.split('\n')).toEqual(['feat: Second.', 'chore(backlog): claim Second.', 'feat: First.', 'chore(backlog): claim First.', 'init']);
+});
+
+test('a failed item is marked and skipped; the loop continues to the next', async () => {
+  const r = await runLoop({ ...base(fakeDirector(['failed', 'done'])), max: 1 });
+  expect(r).toEqual({ completed: 1, failed: 1, reason: 'reached max 1' });
+  const md = await readFile(join(repo, '.worktrees', 'agent', 'docs', 'backlog.md'), 'utf8');
+  expect(md).toMatch(/- \[!\] \*\*First\.\*\*.*\n  - failed \d{4}-\d{2}-\d{2}: could not\n- \[x\] \*\*Second\.\*\*/);
+});
+
+test('an empty backlog waits and re-checks main; stops when the signal aborts', async () => {
+  await writeFile(join(repo, 'docs', 'backlog.md'), '# Backlog\n\n## Section\n\n- [x] **Old.** done\n');
+  await git(execSh, repo, 'commit', '-q', '-am', 'empty');
+  const ac = new AbortController();
+  let sleeps = 0;
+  const sleep = async () => {
+    sleeps++;
+    if (sleeps === 1) {
+      await writeFile(join(repo, 'docs', 'backlog.md'), '# Backlog\n\n## Section\n\n- [x] **Old.** done\n- [ ] **New.** Done when: done.\n');
+      await git(execSh, repo, 'commit', '-q', '-am', 'docs(backlog): add New');
+    } else ac.abort();
+  };
+  const r = await runLoop({ ...base(fakeDirector(['done'])), max: null, sleep, signal: ac.signal });
+  expect(r.completed).toBe(1);
+  expect(r.reason).toBe('stopped');
+  expect(sleeps).toBe(2);
+});
+
+test('stops after three consecutive failures', async () => {
+  await writeFile(join(repo, 'docs', 'backlog.md'), `${BACKLOG}- [ ] **Third.** Done when: done.\n- [ ] **Fourth.** Done when: done.\n`);
+  await git(execSh, repo, 'commit', '-q', '-am', 'more');
+  const r = await runLoop({ ...base(fakeDirector(['crash', 'failed', 'crash'])), max: null });
+  expect(r).toEqual({ completed: 0, failed: 3, reason: '3 consecutive failures' });
+});
+
+test('refuses a dirty work tree', async () => {
+  const r0 = await runLoop({ ...base(fakeDirector([])), max: 0 });
+  expect(r0.reason).toBe('reached max 0');
+  await writeFile(join(repo, '.worktrees', 'agent', 'junk.txt'), 'x');
+  const r = await runLoop({ ...base(fakeDirector(['done'])), max: 1 });
+  expect(r.reason).toMatch(/working tree is dirty/);
+});
