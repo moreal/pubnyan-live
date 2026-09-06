@@ -45,6 +45,7 @@ describe('selectPath', () => {
   test('errors name the selector', () => {
     expect(() => selectPath([square], 'zzz#outer')).toThrow(/no path with id "zzz"/);
     expect(() => selectPath([square], 'p1#9')).toThrow(/out of range/);
+    expect(() => selectPath([square], 'p1#foo')).toThrow(/is not a number/);
   });
 });
 

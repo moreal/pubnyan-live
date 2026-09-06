@@ -68,7 +68,10 @@ export function selectPath(paths: SourcePath[], selector: string | string[]): st
   else if (which === 'rest') chosen = subs.filter((s) => s !== outer);
   else {
     const n = Number(which);
-    if (!Number.isInteger(n) || n < 0 || n >= subs.length) {
+    if (!Number.isInteger(n)) {
+      throw new Error(`selector "${selector}": subpath index "${which}" is not a number`);
+    }
+    if (n < 0 || n >= subs.length) {
       throw new Error(`selector "${selector}": subpath index out of range (0..${subs.length - 1})`);
     }
     chosen = [subs[n]];

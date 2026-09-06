@@ -44,7 +44,7 @@ Deferred cleanups found in the foundation and agent-loop reviews. None blocks a 
 - [x] **`svg-source` drops `Q` quadratics.** Lower them to cubics, or fail with a message naming the offending command and path id.
 - [x] **`isPathData` is a whitelist, not a grammar.** It accepts malformed data such as a lone `M` with no coordinates. Parse with `parsePath` instead.
 - [x] **`REST` vectors in `sample.ts` are shared instances.** `REST.position` and `REST.scale` are handed straight to callers; a mutating consumer would corrupt every future sample. Freeze them or return copies.
-- [ ] **Selector suffix errors conflate two failures.** `id#foo` reports "subpath index out of range"; distinguish "not a number" from "out of range".
+- [x] **Selector suffix errors conflate two failures.** `id#foo` reports "subpath index out of range"; distinguish "not a number" from "out of range".
 - [ ] **Typed loader for JSON rigs.** Replace the `as unknown as Rig` casts in `motion/index.ts` with a loader that validates and narrows.
 - [ ] **Repository LICENSE.** Decide the licence for the code and add the file; the artwork stays CC BY-SA 4.0 under its own attribution.
 - [ ] **`git_commit` re-runs the suite the reviewer just ran.** Every item pays for `npm run check` twice. Cache it by tree: `run_checks` writes the `git write-tree` hash it verified, and `git_commit` skips its own run while the tree still hashes the same.
