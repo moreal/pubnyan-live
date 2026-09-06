@@ -39,6 +39,14 @@ describe('validateRig', () => {
     expect(errors).toHaveLength(2);
   });
 
+  test('rejects malformed path data such as a lone M with no coordinates', () => {
+    const errors = validateRig({
+      ...good,
+      parts: [{ name: 'body', fill: '#000000', pivot: [0, 0], path: 'M' }],
+    });
+    expect(errors.some((e) => e.includes('path must be null or absolute'))).toBe(true);
+  });
+
   test('assertValid throws with all messages', () => {
     expect(() => assertValid(['a', 'b'], 'rig test')).toThrow(/rig test.*\n- a\n- b/s);
     expect(() => assertValid([], 'ok')).not.toThrow();
