@@ -15,6 +15,8 @@ export const EXPECTED_STORY_IDS = [
   'targets-svg--gallery',
   'targets-video--player',
   'targets-video--gallery',
+  'targets-lottie--player',
+  'targets-lottie--bundle',
 ];
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
