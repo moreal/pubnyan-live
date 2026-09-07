@@ -36,32 +36,32 @@
     {
       "name": "nod",
       "rig": "pubnyan",
-      "duration": 0.6,
-      "fps": 30,
+      "duration": 0.7,
+      "fps": 60,
       "loop": false,
       "file": "nod.svg"
     },
     {
       "name": "tilt",
       "rig": "pubnyan",
-      "duration": 0.8,
-      "fps": 30,
+      "duration": 0.9,
+      "fps": 60,
       "loop": false,
       "file": "tilt.svg"
     },
     {
       "name": "ear-twitch",
       "rig": "pubnyan",
-      "duration": 0.3,
-      "fps": 30,
+      "duration": 0.35,
+      "fps": 60,
       "loop": false,
       "file": "ear-twitch.svg"
     },
     {
       "name": "tail-flick",
       "rig": "pubnyan",
-      "duration": 0.4,
-      "fps": 30,
+      "duration": 0.45,
+      "fps": 60,
       "loop": false,
       "file": "tail-flick.svg"
     },
