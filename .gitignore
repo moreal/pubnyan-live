@@ -1,6 +1,8 @@
 node_modules/
 data/
 dist/verify/
+dist/storybook/
+.storybook-build/
 rig/preview/*.png
 rig/inspect/
 .env

@@ -31,7 +31,13 @@
     "check": "npm run check:types && npm test && npm run verify",
     "agent": "node scripts/agent-loop.mjs",
     "plan": "node scripts/plan.mjs",
-    "backlog:add": "node scripts/backlog-add.mjs"
+    "backlog:add": "node scripts/backlog-add.mjs",
+    "prestorybook": "npm run storybook:assets",
+    "prestorybook:build": "npm run storybook:assets",
+    "storybook:assets": "npm run export:svg && npm run export:lottie && npm run export:rive && npm run export:video",
+    "storybook": "storybook dev -p 6007",
+    "storybook:build": "storybook build -o .storybook-build && rm -rf dist/storybook && mkdir -p dist && mv .storybook-build dist/storybook",
+    "storybook:smoke": "node scripts/storybook-smoke.mjs"
   },
   "dependencies": {
     "@flue/runtime": "^2.0.3",
@@ -48,9 +54,12 @@
   },
   "devDependencies": {
     "@flue/cli": "^2.0.3",
+    "@storybook/html-vite": "^10.6.0",
     "@types/node": "^26.4.1",
     "@types/pngjs": "^6.0.5",
+    "storybook": "^10.6.0",
     "typescript": "^7.0.2",
+    "vite": "^8.2.2",
     "vitest": "^5.0.0"
   },
   "allowScripts": {
