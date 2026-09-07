@@ -12,8 +12,8 @@
     {
       "name": "idle",
       "rig": "pubnyan",
-      "duration": 4,
-      "fps": 30,
+      "duration": 6,
+      "fps": 60,
       "loop": true,
       "file": "idle.svg"
     },
