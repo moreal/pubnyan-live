@@ -11,7 +11,11 @@ export class Renderer {
   }
 
   static async launch(): Promise<Renderer> {
-    const browser = await puppeteer.launch();
+    // CI runners (ubuntu-latest) restrict unprivileged user namespaces, which breaks Chrome's
+    // setuid sandbox. These are throwaway CI/local processes rendering our own content, so
+    // running without the sandbox there is an acceptable tradeoff.
+    const args = process.env.CI ? ['--no-sandbox', '--disable-setuid-sandbox'] : [];
+    const browser = await puppeteer.launch({ args });
     const page = await browser.newPage();
     return new Renderer(browser, page);
   }
