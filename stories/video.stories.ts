@@ -1,6 +1,7 @@
 // These files come from `npm run export:video` and need `ffmpeg` on PATH.
 import type { Meta, StoryObj } from '@storybook/html-vite';
 import { clips } from '#motion/index.ts';
+import { assetPath } from './asset-path.ts';
 
 const clipNames = clips.map((clip) => clip.name);
 const formats = ['mp4', 'webp', 'gif'] as const;
@@ -34,7 +35,7 @@ type Story = StoryObj<PlayerArgs>;
 
 export const Player: Story = {
   render: (args) => {
-    const src = `/video/${args.clip}.${args.format}`;
+    const src = assetPath(`video/${args.clip}.${args.format}`);
     if (args.format === 'mp4') {
       const video = document.createElement('video');
       video.src = src;
@@ -69,7 +70,7 @@ export const Gallery: Story = {
       cell.style.textAlign = 'center';
 
       const video = document.createElement('video');
-      video.src = `/video/${name}.mp4`;
+      video.src = assetPath(`video/${name}.mp4`);
       video.autoplay = true;
       video.loop = true;
       video.muted = true;

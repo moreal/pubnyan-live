@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/html-vite';
 import { DotLottie } from '@lottiefiles/dotlottie-web';
 import lottie from 'lottie-web';
 import { clips } from '#motion/index.ts';
+import { assetPath } from './asset-path.ts';
 
 const clipNames = clips.map((clip) => clip.name);
 
@@ -44,7 +45,7 @@ export const Player: Story = {
 
     const instance = lottie.loadAnimation({
       container,
-      path: `/lottie/${args.clip}.json`,
+      path: assetPath(`lottie/${args.clip}.json`),
       renderer: 'svg',
       loop: args.loop,
       autoplay: true,
@@ -83,7 +84,7 @@ export const Bundle: Story = {
 
     const dotlottie = new DotLottie({
       canvas,
-      src: '/lottie/pubnyan.lottie',
+      src: assetPath('lottie/pubnyan.lottie'),
       autoplay: true,
       loop: true,
     });
