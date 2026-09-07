@@ -24,7 +24,20 @@ export interface Rig {
   expressions: Record<string, Record<string, string | null>>;
 }
 
-export type EaseName = 'linear' | 'easeIn' | 'easeOut' | 'easeInOut' | 'inOutSine' | 'outQuint' | 'outBack';
+export type EaseName =
+  | 'linear'
+  | 'easeIn'
+  | 'easeOut'
+  | 'easeInOut'
+  | 'inOutSine'
+  | 'outQuint'
+  | 'outBack'
+  | 'outCubic'
+  | 'inOutCubic'
+  | 'inOutQuad'
+  | 'inBack'
+  | 'inOutBack'
+  | 'outSine';
 export type Property = 'position' | 'rotation' | 'scale' | 'opacity' | 'shape';
 export type TrackValue<P extends Property> = P extends 'position' | 'scale' ? Vec2 : P extends 'shape' ? string : number;
 
