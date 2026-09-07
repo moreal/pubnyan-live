@@ -101,7 +101,7 @@
       "name": "to-angry",
       "rig": "pubnyan",
       "duration": 0.4,
-      "fps": 30,
+      "fps": 60,
       "loop": false,
       "file": "to-angry.svg"
     },
@@ -109,7 +109,7 @@
       "name": "from-angry",
       "rig": "pubnyan",
       "duration": 0.4,
-      "fps": 30,
+      "fps": 60,
       "loop": false,
       "file": "from-angry.svg"
     },
@@ -117,7 +117,7 @@
       "name": "to-curious",
       "rig": "pubnyan",
       "duration": 0.4,
-      "fps": 30,
+      "fps": 60,
       "loop": false,
       "file": "to-curious.svg"
     },
@@ -125,7 +125,7 @@
       "name": "from-curious",
       "rig": "pubnyan",
       "duration": 0.4,
-      "fps": 30,
+      "fps": 60,
       "loop": false,
       "file": "from-curious.svg"
     },
@@ -133,7 +133,7 @@
       "name": "to-cry",
       "rig": "pubnyan",
       "duration": 0.4,
-      "fps": 30,
+      "fps": 60,
       "loop": false,
       "file": "to-cry.svg"
     },
@@ -141,7 +141,7 @@
       "name": "from-cry",
       "rig": "pubnyan",
       "duration": 0.4,
-      "fps": 30,
+      "fps": 60,
       "loop": false,
       "file": "from-cry.svg"
     },
@@ -149,7 +149,7 @@
       "name": "to-shy",
       "rig": "pubnyan",
       "duration": 0.4,
-      "fps": 30,
+      "fps": 60,
       "loop": false,
       "file": "to-shy.svg"
     },
@@ -157,7 +157,7 @@
       "name": "from-shy",
       "rig": "pubnyan",
       "duration": 0.4,
-      "fps": 30,
+      "fps": 60,
       "loop": false,
       "file": "from-shy.svg"
     }
