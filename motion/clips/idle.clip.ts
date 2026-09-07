@@ -6,7 +6,8 @@ import { clip, key, track } from '#ir/clip.ts';
  *  - body breath: scale swells at the midpoint, position rises a quarter
  *    cycle earlier so the rise reads as an inhale rather than a pulse.
  *  - head follow-through: rotation and position lag the body's swell by
- *    ~0.35 s and settle back with outCubic.
+ *    ~0.35 s and settle back with inOutSine (matches the body/ring's
+ *    zero-velocity seam so the loop restarts without a jerk).
  *  - a double blink at 3.2 s and a shorter one at 3.55 s.
  *  - the ring gaps alternating on inOutSine over the full loop.
  */
@@ -28,8 +29,8 @@ export default clip('idle', { rig: 'pubnyan', duration: 6, fps: 60, loop: true }
   track('body', 'position', [key(0, [0, 0]), key(1.5, [0, -2], 'inOutSine'), key(6, [0, 0], 'inOutSine')]),
 
   // head follow-through, lagging the body's swell by ~0.35 s
-  track('head', 'rotation', [key(0, 0), key(3.35, 1.2, 'outCubic'), key(6, 0, 'outCubic')]),
-  track('head', 'position', [key(0, [0, 0]), key(3.35, [2, 1.5], 'outCubic'), key(6, [0, 0], 'outCubic')]),
+  track('head', 'rotation', [key(0, 0), key(3.35, 1.2, 'inOutSine'), key(6, 0, 'inOutSine')]),
+  track('head', 'position', [key(0, [0, 0]), key(3.35, [2, 1.5], 'inOutSine'), key(6, [0, 0], 'inOutSine')]),
 
   // double blink
   blink('eye-l.white', 0.08),
