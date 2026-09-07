@@ -26,6 +26,10 @@ npm run agent -- 1     # let the Flue director complete one backlog item (needs 
                         # the artist subagent (graphics/visual items) runs on openai-codex/gpt-6-astra and authenticates via a ChatGPT Plus/Pro (Codex) subscription; run `pi login openai-codex` once to connect it
 ```
 
+## Storybook
+
+The Storybook build is published to GitHub Pages at https://moreal.github.io/pubnyan-live/ on every push to `main` by `.github/workflows/storybook.yml`, and can also be triggered manually via `workflow_dispatch`. One-time setup: in the repository settings, under **Settings → Pages**, set **Source** to **GitHub Actions**.
+
 ## Output notes
 
 The `dist/svg` files morph shapes with CSS `d: path()`, which needs a browser that supports it (Chromium, Firefox 97+). Shapes whose segment sequences differ crossfade instead, and that output is universal.
