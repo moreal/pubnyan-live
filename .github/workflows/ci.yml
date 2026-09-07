@@ -9,6 +9,8 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 26 }
       - run: npm ci
+      - run: sudo apt-get install -y ffmpeg webp
+      - run: git config --global user.name "github-actions[bot]" && git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
       - run: npm run check:types
       - run: npm test
       - run: npm run rig:extract
