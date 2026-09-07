@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/html-vite';
 import { Rive } from '@rive-app/canvas';
 import { clips, getRig, machine } from '#motion/index.ts';
+import { assetPath } from './asset-path.ts';
 
 const clipNames = clips.map((clip) => clip.name);
 const clipByName = new Map(clips.map((clip) => [clip.name, clip]));
@@ -39,7 +40,7 @@ export const Player: PlayerStory = {
 
     const instance = new Rive({
       canvas,
-      src: `/rive/${args.clip}.riv`,
+      src: assetPath(`rive/${args.clip}.riv`),
       autoplay: true,
     });
 
@@ -109,7 +110,7 @@ export const Machine: StoryObj = {
 
     const instance = new Rive({
       canvas,
-      src: '/rive/pubnyan.riv',
+      src: assetPath('rive/pubnyan.riv'),
       stateMachines: 'main',
       autoplay: true,
       onLoad: () => {

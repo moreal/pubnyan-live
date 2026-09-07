@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/html-vite';
 import { clips } from '#motion/index.ts';
+import { assetPath } from './asset-path.ts';
 
 const clipNames = clips.map((clip) => clip.name);
 
@@ -27,7 +28,7 @@ type Story = StoryObj<PlayerArgs>;
 export const Player: Story = {
   render: (args) => {
     const img = document.createElement('img');
-    img.src = `/svg/${args.clip}.svg`;
+    img.src = assetPath(`svg/${args.clip}.svg`);
     img.alt = args.clip;
     img.style.width = '256px';
     img.style.height = '256px';
@@ -48,7 +49,7 @@ export const Gallery: Story = {
       cell.style.textAlign = 'center';
 
       const img = document.createElement('img');
-      img.src = `/svg/${name}.svg`;
+      img.src = assetPath(`svg/${name}.svg`);
       img.alt = name;
       img.style.width = '128px';
       img.style.height = '128px';

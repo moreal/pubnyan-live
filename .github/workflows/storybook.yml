@@ -21,6 +21,8 @@ jobs:
       - run: sudo apt-get install -y ffmpeg webp
       - run: npm run rig:extract
       - run: npm run storybook:build
+        env:
+          STORYBOOK_BASE: /${{ github.event.repository.name }}/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist/storybook
