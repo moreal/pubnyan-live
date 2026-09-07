@@ -4,5 +4,6 @@ export default defineConfig({
   test: {
     include: ['packages/**/*.test.ts', 'motion/**/*.test.ts', 'src/**/*.test.ts'],
     testTimeout: 60_000,
+    hookTimeout: 30_000,
   },
 });
