@@ -18,6 +18,14 @@
       "file": "idle.svg"
     },
     {
+      "name": "head-turn",
+      "rig": "pubnyan",
+      "duration": 1.2,
+      "fps": 30,
+      "loop": false,
+      "file": "head-turn.svg"
+    },
+    {
       "name": "wink",
       "rig": "pubnyan",
       "duration": 1,

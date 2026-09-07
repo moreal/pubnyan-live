@@ -9,17 +9,18 @@
       "overridesFile": "pubnyan-eyes-mouth.svg",
       "parts": [
         { "name": "body", "fill": "#000000", "pivot": [187, 314] },
-        { "name": "face", "fill": "#ffffff", "parent": "body" },
-        { "name": "eye-l.white", "fill": "#ffffff", "parent": "body" },
-        { "name": "eye-r.white", "fill": "#ffffff", "parent": "body" },
+        { "name": "head", "fill": "#000000", "parent": "body", "pivot": [193, 210] },
+        { "name": "face", "fill": "#ffffff", "parent": "head" },
+        { "name": "eye-l.white", "fill": "#ffffff", "parent": "head" },
+        { "name": "eye-r.white", "fill": "#ffffff", "parent": "head" },
         { "name": "ring-gap-l", "fill": "#ffffff", "parent": "body" },
         { "name": "ring-gap-r", "fill": "#ffffff", "parent": "body" },
-        { "name": "tear-l", "fill": "#ffffff", "parent": "body" },
-        { "name": "tear-r", "fill": "#ffffff", "parent": "body" },
-        { "name": "eye-l.pupil", "fill": "#000000", "parent": "body" },
-        { "name": "eye-r.pupil", "fill": "#000000", "parent": "body" },
-        { "name": "nose", "fill": "#000000", "parent": "body" },
-        { "name": "mouth", "fill": "#000000", "parent": "body" }
+        { "name": "tear-l", "fill": "#ffffff", "parent": "head" },
+        { "name": "tear-r", "fill": "#ffffff", "parent": "head" },
+        { "name": "eye-l.pupil", "fill": "#000000", "parent": "head" },
+        { "name": "eye-r.pupil", "fill": "#000000", "parent": "head" },
+        { "name": "nose", "fill": "#000000", "parent": "head" },
+        { "name": "mouth", "fill": "#000000", "parent": "head" }
       ],
       "expressions": {
         "normal": {

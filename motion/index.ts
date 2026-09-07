@@ -10,6 +10,7 @@ import exprCurious from '#motion/clips/expr-curious.clip.ts';
 import exprShy from '#motion/clips/expr-shy.clip.ts';
 import spinner from '#motion/clips/spinner.clip.ts';
 import idle from '#motion/clips/idle.clip.ts';
+import headTurn from '#motion/clips/head-turn.clip.ts';
 import wink from '#motion/clips/wink.clip.ts';
 import nod from '#motion/clips/nod.clip.ts';
 import tilt from '#motion/clips/tilt.clip.ts';
@@ -33,6 +34,7 @@ export const rigs: Record<string, Rig> = {
 export const clips: Clip[] = [
   spinner,
   idle,
+  headTurn,
   wink,
   nod,
   tilt,
