@@ -9,6 +9,12 @@ export const EASES: Record<EaseName, [number, number, number, number]> = {
   inOutSine: [0.37, 0, 0.63, 1],
   outQuint: [0.22, 1, 0.36, 1],
   outBack: [0.34, 1.56, 0.64, 1],
+  outCubic: [0.33, 1, 0.68, 1],
+  inOutCubic: [0.65, 0, 0.35, 1],
+  inOutQuad: [0.45, 0, 0.55, 1],
+  inBack: [0.36, 0, 0.66, -0.56],
+  inOutBack: [0.68, -0.6, 0.32, 1.6],
+  outSine: [0.61, 1, 0.88, 1],
 };
 
 export const EASE_NAMES = Object.keys(EASES) as EaseName[];

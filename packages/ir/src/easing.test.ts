@@ -28,6 +28,27 @@ describe('easeValue', () => {
     expect(peak).toBeGreaterThan(1.05);
   });
 
+  test('new eases are registered in EASE_NAMES', () => {
+    const newNames = ['outCubic', 'inOutCubic', 'inOutQuad', 'inBack', 'inOutBack', 'outSine'];
+    for (const name of newNames) {
+      expect(EASE_NAMES).toContain(name);
+    }
+  });
+
+  test('inBack and inOutBack undershoot below 0 in (0, 0.5)', () => {
+    for (const name of ['inBack', 'inOutBack'] as const) {
+      const samples = Array.from({ length: 49 }, (_, i) => easeValue(name, (i + 1) / 100));
+      expect(Math.min(...samples)).toBeLessThan(0);
+    }
+  });
+
+  test('outBack and inOutBack exceed 1 in (0.5, 1)', () => {
+    for (const name of ['outBack', 'inOutBack'] as const) {
+      const samples = Array.from({ length: 49 }, (_, i) => easeValue(name, 51 / 100 + i / 100));
+      expect(Math.max(...samples)).toBeGreaterThan(1);
+    }
+  });
+
   test('table matches CSS cubic-bezier form', () => {
     expect(EASES.easeInOut).toEqual([0.42, 0, 0.58, 1]);
   });
