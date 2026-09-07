@@ -10,7 +10,12 @@ import { fileURLToPath } from 'node:url';
 import puppeteer from 'puppeteer';
 import { PNG } from 'pngjs';
 
-export const EXPECTED_STORY_IDS = ['targets-svg--player', 'targets-svg--gallery'];
+export const EXPECTED_STORY_IDS = [
+  'targets-svg--player',
+  'targets-svg--gallery',
+  'targets-video--player',
+  'targets-video--gallery',
+];
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const STORYBOOK_DIR = join(ROOT, 'dist', 'storybook');
@@ -27,6 +32,8 @@ const MIME_TYPES = {
   '.woff2': 'font/woff2',
   '.wasm': 'application/wasm',
   '.mp4': 'video/mp4',
+  '.webp': 'image/webp',
+  '.gif': 'image/gif',
 };
 
 function main() {
