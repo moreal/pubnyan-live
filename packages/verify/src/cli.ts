@@ -1,13 +1,17 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { exportLottieBundle } from '#export-lottie/bundle.ts';
+import { exportRiveMachine } from '#export-rive/machine.ts';
 import { exportVideo } from '#export-video/index.ts';
 import { writeSvgManifest } from '#export-svg/manifest.ts';
 import { clips, getRig, machine } from '#motion/index.ts';
 import { contactSheet } from '#verify/contact-sheet.ts';
 import { bundledClipNames, checkDotlottieBundle, machineInputNames } from '#verify/dotlottie-check.ts';
 import { fixtureClips } from '#verify/fixtures/clips.ts';
-import { checkParity, sampleTimes } from '#verify/parity.ts';
+import { checkParity, compareFrames, sampleTimes } from '#verify/parity.ts';
+import { referenceFrame } from '#verify/reference.ts';
+import { renderRiveStateSequence } from '#verify/rive-machine-check.ts';
+import { PARITY_MAX_RATIO } from '#verify/config.ts';
 import { Renderer } from '#render/renderer.ts';
 import { TARGETS } from '#verify/targets/index.ts';
 
@@ -40,6 +44,31 @@ try {
     }
     await writeFile(join(VERIFY_DIR, `${clip.name}-contact.png`), await contactSheet(renderer, times, rows));
   }
+
+  // The combined file must render expression inputs faithfully, not just load.
+  const machineRig = getRig(machine.rig);
+  const machineBytes = exportRiveMachine(machineRig, clips.filter((c) => c.rig === machine.rig), machine);
+  await mkdir(join(DIST, 'rive'), {recursive:true});
+  await writeFile(join(DIST, 'rive', 'pubnyan.riv'), machineBytes);
+  const expressions = ['normal', 'cry', 'curious', 'shy', 'angry', 'normal'];
+  const expressionInput = machine.inputs.expression;
+  if (expressionInput?.type !== 'enum') throw new Error('expression input must be an enum');
+  const machineFrames = await renderRiveStateSequence(renderer, machineRig, machineBytes,
+    expressions.map((expression) => ({expression:expressionInput.values.indexOf(expression),seconds:1})));
+  const referenceFrames: Buffer[] = [];
+  for (const [i, expression] of expressions.entries()) {
+    const clipName = machine.layers.expression!.states[expression]!.clip;
+    const clip = clips.find((c) => c.name === clipName)!;
+    const expected = await referenceFrame(renderer, machineRig, clip, 1);
+    referenceFrames.push(expected);
+    const diff = compareFrames(expected, machineFrames[i]!);
+    const pass = diff.ratio <= PARITY_MAX_RATIO;
+    failed ||= !pass;
+    report.push({clip:expression, target:'rive-machine', pass, worstT:1, worstRatio:diff.ratio, skipped:[]});
+    console.log(`${pass ? 'PASS' : 'FAIL'} ${expression} / rive-machine: ${(diff.ratio * 100).toFixed(3)}%`);
+  }
+  await writeFile(join(VERIFY_DIR, 'rive-machine-contact.png'), await contactSheet(renderer,
+    expressions.map((_, i) => i + 1), [{label:'reference',frames:referenceFrames},{label:'rive-machine',frames:machineFrames}]));
 
   // Not a parity target: no reference to diff against, just render mp4/webp/gif for each clip.
   for (const clip of clips) {

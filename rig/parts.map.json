@@ -3,102 +3,237 @@
   "overrides": "rig/overrides",
   "rigs": {
     "pubnyan": {
-      "artboard": { "width": 374, "height": 319 },
+      "artboard": {
+        "width": 406,
+        "height": 351
+      },
       "default": "normal",
-      "align": { "part": "nose" },
+      "align": {
+        "part": "nose"
+      },
       "overridesFile": "pubnyan-eyes-mouth.svg",
       "parts": [
-        { "name": "body", "fill": "#000000", "pivot": [187, 314] },
-        { "name": "head", "fill": "#000000", "parent": "body", "pivot": [193, 210] },
-        { "name": "face", "fill": "#ffffff", "parent": "head" },
-        { "name": "eye-l.white", "fill": "#ffffff", "parent": "head" },
-        { "name": "eye-r.white", "fill": "#ffffff", "parent": "head" },
-        { "name": "ring-gap-l", "fill": "#ffffff", "parent": "body" },
-        { "name": "ring-gap-r", "fill": "#ffffff", "parent": "body" },
-        { "name": "tear-l", "fill": "#ffffff", "parent": "head" },
-        { "name": "tear-r", "fill": "#ffffff", "parent": "head" },
-        { "name": "eye-l.pupil", "fill": "#000000", "parent": "head" },
-        { "name": "eye-r.pupil", "fill": "#000000", "parent": "head" },
-        { "name": "nose", "fill": "#000000", "parent": "head" },
-        { "name": "mouth", "fill": "#000000", "parent": "head" }
+        {
+          "name": "body",
+          "fill": "#000000",
+          "pivot": [
+            203,
+            330
+          ]
+        },
+        {
+          "name": "head",
+          "fill": "#000000",
+          "parent": "body",
+          "pivot": [
+            209,
+            226
+          ]
+        },
+        {
+          "name": "ear-l",
+          "fill": "#000000",
+          "parent": "head",
+          "pivot": [
+            138,
+            70
+          ]
+        },
+        {
+          "name": "ear-r",
+          "fill": "#000000",
+          "parent": "head",
+          "pivot": [
+            288,
+            63
+          ]
+        },
+        {
+          "name": "face",
+          "fill": "#ffffff",
+          "parent": "head"
+        },
+        {
+          "name": "eye-l.white",
+          "fill": "#ffffff",
+          "parent": "head"
+        },
+        {
+          "name": "eye-r.white",
+          "fill": "#ffffff",
+          "parent": "head"
+        },
+        {
+          "name": "ring-gap-l",
+          "fill": "#ffffff",
+          "parent": "body"
+        },
+        {
+          "name": "ring-gap-r",
+          "fill": "#ffffff",
+          "parent": "body"
+        },
+        {
+          "name": "tear-l",
+          "fill": "#ffffff",
+          "parent": "head"
+        },
+        {
+          "name": "tear-r",
+          "fill": "#ffffff",
+          "parent": "head"
+        },
+        {
+          "name": "eye-l.pupil",
+          "fill": "#000000",
+          "parent": "head"
+        },
+        {
+          "name": "eye-r.pupil",
+          "fill": "#000000",
+          "parent": "head"
+        },
+        {
+          "name": "nose",
+          "fill": "#000000",
+          "parent": "head"
+        },
+        {
+          "name": "mouth",
+          "fill": "#000000",
+          "parent": "head"
+        }
       ],
       "expressions": {
         "normal": {
           "file": "pubnyan-normal-transparent.svg",
           "map": {
-            "body": "path17#outer", "face": "path7#outer",
-            "eye-l.white": "path11#outer", "eye-r.white": "path9#outer",
-            "ring-gap-l": "path15", "ring-gap-r": "path13",
-            "eye-l.pupil": "path21", "eye-r.pupil": "path19",
-            "nose": "path23", "mouth": "path25"
+            "body": "path17#outer",
+            "face": "path7#outer",
+            "eye-l.white": "path11#outer",
+            "eye-r.white": "path9#outer",
+            "ring-gap-l": "path15",
+            "ring-gap-r": "path13",
+            "eye-l.pupil": "path21",
+            "eye-r.pupil": "path19",
+            "nose": "path23",
+            "mouth": "path25"
           },
           "overrides": {
-            "eye-l.white": "eye-l-normal", "eye-r.white": "eye-r-normal",
-            "mouth": "mouth-normal"
+            "eye-l.white": "eye-l-normal",
+            "eye-r.white": "eye-r-normal",
+            "mouth": "mouth-normal",
+            "eye-l.pupil": "pupil-l-normal",
+            "eye-r.pupil": "pupil-r-normal",
+            "body": "body-articulated",
+            "head": "head-articulated",
+            "ear-l": "ear-l-articulated",
+            "ear-r": "ear-r-articulated",
+            "face": "normal-face-aligned",
+            "ring-gap-l": "normal-ring-gap-l-aligned",
+            "ring-gap-r": "normal-ring-gap-r-aligned",
+            "nose": "normal-nose-aligned"
           }
         },
         "angry": {
           "file": "pubnyan-angry-transparent.svg",
           "map": {
             "nose": "path49",
-            "eye-l.white": "path47#outer", "eye-r.white": "path43#outer",
-            "eye-l.pupil": null, "eye-r.pupil": null,
+            "eye-l.white": "path47#outer",
+            "eye-r.white": "path43#outer",
             "mouth": "path57"
           },
           "overrides": {
-            "eye-l.white": "eye-l-angry", "eye-r.white": "eye-r-angry",
-            "mouth": "mouth-angry"
+            "eye-l.white": "eye-l-angry",
+            "eye-r.white": "eye-r-angry",
+            "mouth": "mouth-angry",
+            "eye-l.pupil": "pupil-l-angry",
+            "eye-r.pupil": "pupil-r-angry",
+            "nose": "angry-nose-aligned"
           }
         },
         "curious": {
           "file": "pubnyan-curious-transparent.svg",
           "map": {
             "nose": "path39",
-            "eye-l.white": "path27#outer", "eye-r.white": "path29#outer",
-            "eye-l.pupil": null, "eye-r.pupil": null,
+            "eye-l.white": "path27#outer",
+            "eye-r.white": "path29#outer",
             "mouth": "path41"
           },
           "overrides": {
-            "eye-l.white": "eye-l-curious", "eye-r.white": "eye-r-curious",
-            "mouth": "mouth-curious"
+            "eye-l.white": "eye-l-curious",
+            "eye-r.white": "eye-r-curious",
+            "mouth": "mouth-curious",
+            "eye-l.pupil": "pupil-l-curious",
+            "eye-r.pupil": "pupil-r-curious",
+            "nose": "curious-nose-aligned"
           }
         },
         "cry": {
           "file": "pubnyan-cry-transparent.svg",
           "map": {
             "nose": "path73",
-            "eye-l.white": "path59#outer", "eye-r.white": "path65#outer",
-            "eye-l.pupil": "path69", "eye-r.pupil": "path71",
-            "tear-l": "path61", "tear-r": "path67",
+            "eye-l.white": "path59#outer",
+            "eye-r.white": "path65#outer",
+            "eye-l.pupil": "path69",
+            "eye-r.pupil": "path71",
+            "tear-l": "path61",
+            "tear-r": "path67",
             "mouth": "path75"
+          },
+          "overrides": {
+            "eye-l.white": "cry-eye-l-white-aligned",
+            "eye-r.white": "cry-eye-r-white-aligned",
+            "tear-l": "cry-tear-l-aligned",
+            "tear-r": "cry-tear-r-aligned",
+            "eye-l.pupil": "cry-eye-l-pupil-aligned",
+            "eye-r.pupil": "cry-eye-r-pupil-aligned",
+            "nose": "cry-nose-aligned",
+            "mouth": "cry-mouth-aligned"
           }
         },
         "shy": {
           "file": "pubnyan-shy-transparent.svg",
           "map": {
             "nose": "path89",
-            "eye-l.white": "path85#outer", "eye-r.white": "path83#outer",
-            "eye-l.pupil": null, "eye-r.pupil": null,
+            "eye-l.white": "path85#outer",
+            "eye-r.white": "path83#outer",
             "mouth": "path111"
           },
           "overrides": {
-            "eye-l.white": "eye-l-shy", "eye-r.white": "eye-r-shy",
-            "mouth": "mouth-shy"
+            "eye-l.white": "eye-l-shy",
+            "eye-r.white": "eye-r-shy",
+            "mouth": "mouth-shy",
+            "eye-l.pupil": "pupil-l-shy",
+            "eye-r.pupil": "pupil-r-shy",
+            "nose": "shy-nose-aligned"
           }
         }
       }
     },
     "starorbit": {
-      "artboard": { "width": 288, "height": 203 },
+      "artboard": {
+        "width": 288,
+        "height": 203
+      },
       "default": "rest",
       "parts": [
-        { "name": "ring", "fill": "#000000" },
-        { "name": "star", "fill": "#000000" }
+        {
+          "name": "ring",
+          "fill": "#000000"
+        },
+        {
+          "name": "star",
+          "fill": "#000000"
+        }
       ],
       "expressions": {
         "rest": {
           "file": "starorbit-transparent-287x202.svg",
-          "map": { "ring": "path834", "star": "path836" }
+          "map": {
+            "ring": "path834",
+            "star": "path836"
+          }
         }
       }
     }

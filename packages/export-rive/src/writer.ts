@@ -161,7 +161,7 @@ export class RivWriter {
       parts.push(word);
     }
 
-    parts.push(...this.chunks);
-    return Buffer.concat(parts);
+    // A combined artboard can exceed the engine's function-argument limit.
+    return Buffer.concat(parts.concat(this.chunks));
   }
 }

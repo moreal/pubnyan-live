@@ -67,6 +67,11 @@ export const Player: Story = {
 };
 
 export const Bundle: Story = {
+  args: {
+    clip: "expr-angry",
+    speed: 4
+  },
+
   render: () => {
     const wrapper = document.createElement('div');
 
@@ -107,5 +112,5 @@ export const Bundle: Story = {
     });
 
     return wrapper;
-  },
+  }
 };

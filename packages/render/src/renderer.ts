@@ -62,7 +62,9 @@ export class Renderer {
    * screenshot, e.g. asserting on a loaded dotLottie's manifest.
    */
   async evaluate<T>(html: string, timeoutMs = 20_000): Promise<T> {
-    await this.page.setContent(`<!doctype html><html><body style="margin:0;background:#fff">${html}</body></html>`);
+    // setContent replaces the DOM but keeps the window. Clear the handshake
+    // before an asynchronous module can expose results from the previous check.
+    await this.page.setContent(`<!doctype html><html><body style="margin:0;background:#fff"><script>window.__done=false;window.__error=undefined;window.__result=undefined;</script>${html}</body></html>`);
     await this.page.waitForFunction('window.__done === true || window.__error', { timeout: timeoutMs });
     const error = await this.page.evaluate(() => (globalThis as unknown as { __error?: string }).__error);
     if (error) throw new Error(`page evaluation failed: ${error}`);

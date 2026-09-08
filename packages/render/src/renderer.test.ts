@@ -25,3 +25,11 @@ test('renders white background, pauses animations at the requested time', async 
   expect(pixel(at500, 2, 10)).toBe(255); // rect moved right by 5px
   expect(pixel(at500, 12, 10)).toBeLessThan(50);
 });
+
+test('each evaluation waits for its own asynchronous result on the reused page', async () => {
+  expect(await renderer.evaluate<number>('<script>window.__result=1;window.__done=true;</script>')).toBe(1);
+  const next = await renderer.evaluate<number>(`<script>
+    setTimeout(()=>{window.__result=2;window.__done=true;},100);
+  </script>`);
+  expect(next).toBe(2);
+});
