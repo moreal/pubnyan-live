@@ -9,13 +9,14 @@ import { Renderer } from '#render/renderer.ts';
 test('articulated silhouette preserves the original outline within raster antialiasing', async () => {
   const source = readSourceSvg(await readFile(new URL('../vendor/visual-identity/exports/pubnyan-normal-transparent.svg', import.meta.url), 'utf8'));
   const original = selectPath(source, 'path17#outer');
+  const gaps = ['path15', 'path13'].map(id => selectPath(source, id));
   const rig = getRig('pubnyan');
-  const pieces = rig.parts.filter((p) => ['body', 'head', 'ear-l', 'ear-r'].includes(p.name));
+  const pieces = rig.parts.filter((p) => ['body', 'ring-back', 'torso', 'head', 'ear-l', 'ear-r', 'ring-front'].includes(p.name));
   const renderer = await Renderer.launch();
   try {
     const difference = await renderer.evaluate<number>(`<script>
-      const draw=(paths,offset)=>{const canvas=document.createElement('canvas');canvas.width=406;canvas.height=351;const c=canvas.getContext('2d');c.translate(offset,offset);for(const d of paths)c.fill(new Path2D(d));return c.getImageData(0,0,406,351).data;};
-      const before=draw(${JSON.stringify([original])},16), after=draw(${JSON.stringify(pieces.map(p => p.path))},0);
+      const draw=(paths,offset,holes=[])=>{const canvas=document.createElement('canvas');canvas.width=406;canvas.height=351;const c=canvas.getContext('2d');c.translate(offset,offset);for(const d of paths)if(d)c.fill(new Path2D(d));c.globalCompositeOperation='destination-out';for(const d of holes)c.fill(new Path2D(d));return c.getImageData(0,0,406,351).data;};
+      const before=draw(${JSON.stringify([original])},16,${JSON.stringify(gaps)}), after=draw(${JSON.stringify(pieces.map(p => p.path))},0);
       let changed=0;for(let i=3;i<before.length;i+=4)if(Math.abs(before[i]-after[i])>32)changed++;
       window.__result=changed;window.__done=true;
     </script>`);

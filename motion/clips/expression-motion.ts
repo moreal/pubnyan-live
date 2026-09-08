@@ -8,7 +8,7 @@ export function expressionShapes(expression: string): Track[] {
 }
 
 export function breath(duration: number, height = 0.008): Track[] {
-  return [track('body', 'scale', [
+  return [track('torso', 'scale', [
     key(0, [1, 1]), key(duration * 0.42, [1.003, 1 + height], 'inOutSine'),
     key(duration, [1, 1], 'inOutSine'),
   ])];
@@ -26,7 +26,7 @@ export function blink(duration: number, start: number, side: 'both' | 'right' = 
     key(start + 0.12, [1, 0.08]),
     key(start + 0.3, [1, 1], 'outCubic'), key(duration, [1, 1]),
   ])), ...parts.filter((part) => part.endsWith('.pupil')).map((part) => track(part, 'opacity', [
-    key(0, 1), key(start, 1), key(start + 0.06, 0, 'easeIn'),
-    key(start + 0.14, 0), key(start + 0.24, 1, 'outCubic'), key(duration, 1),
+    key(0, 1), key(start, 1), key(start + 0.04, 1), key(start + 0.07, 0, 'easeIn'),
+    key(start + 0.12, 0), key(start + 0.15, 1, 'outCubic'), key(duration, 1),
   ]))];
 }

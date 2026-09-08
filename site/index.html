@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>pubnyan, live</title>
+  <meta name="description" content="pubnyan, the Hackers' Pub mascot, animated once and exported to animated SVG, Lottie, Rive and video.">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#fafaf8" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#151515" media="(prefers-color-scheme: dark)">
+  <meta property="og:title" content="pubnyan, live">
+  <meta property="og:description" content="A little curiosity. A whole universe. The Hackers' Pub mascot, animated once and exported everywhere.">
+  <meta property="og:image" content="./assets/still/normal.svg">
+  <link rel="icon" href="./assets/still/normal.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="./site.css">
+  <link rel="preload" as="image" href="./assets/svg/idle.svg">
+</head>
+<body>
+  <a class="skip" href="#stage-section">Skip to the interactive stage</a>
+
+  <header class="top">
+    <a class="wordmark" href="./" aria-label="pubnyan, live">
+      <img src="./assets/still/normal.svg" alt="" width="28" height="24">
+      <span>pubnyan<em>live</em></span>
+    </a>
+    <nav class="top__nav" aria-label="Site">
+      <a href="#stage-section">Stage</a>
+      <a href="#gallery">Clips</a>
+      <a href="#formats">Formats</a>
+      <a href="#how">How</a>
+      <a href="./_storybook/">Storybook</a>
+      <a href="https://github.com/moreal/pubnyan-live">GitHub</a>
+      <button id="motion-toggle" type="button" class="motion-toggle" aria-pressed="true">
+        <i aria-hidden="true"></i><span>Motion on</span>
+      </button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- Hero ------------------------------------------------------------------ -->
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero__copy">
+        <p class="eyebrow">The Hackers' Pub mascot, in motion</p>
+        <h1 id="hero-title">A little curiosity.<br>A whole universe.</h1>
+        <p class="lede">
+          pubnyan is a calm cat with a star for a mouth and a ring around its neck.
+          Every performance is written once, in a small motion language, and exported
+          to animated SVG, Lottie, Rive and video that all agree with each other.
+        </p>
+        <div class="actions">
+          <button id="hero-hello" type="button" class="button button--primary">Say hello</button>
+          <a class="button" href="#stage-section">Give pubnyan a thought</a>
+          <a class="button button--ghost" href="./_storybook/">Open the Storybook</a>
+        </div>
+        <dl class="facts">
+          <div><dt>Clips</dt><dd>22</dd></div>
+          <div><dt>Targets</dt><dd>4</dd></div>
+          <div><dt>Expressions</dt><dd>5</dd></div>
+          <div><dt>Definition</dt><dd>one</dd></div>
+        </dl>
+      </div>
+      <figure class="hero__stage surface">
+        <img id="hero-cat" src="./assets/svg/idle.svg" alt="pubnyan, listening" width="406" height="351" decoding="async" fetchpriority="high">
+        <figcaption><code>dist/svg/idle.svg</code> · animated SVG in an <code>&lt;img&gt;</code></figcaption>
+      </figure>
+    </section>
+
+    <!-- Stage ------------------------------------------------------------------ -->
+    <section id="stage-section" class="section" aria-labelledby="stage-title">
+      <div class="section__head">
+        <p class="eyebrow">Interactive</p>
+        <h2 id="stage-title">Give pubnyan a thought.</h2>
+        <p class="section__lede">
+          One Rive file, one state machine. Pick a sustained expression, then fire a
+          reaction on top of it: ordinary reactions keep the emotion underneath, and a
+          celebration takes over the whole face for a moment, then hands it back.
+        </p>
+      </div>
+      <div id="stage" class="stage" data-expression="normal">
+        <div class="stage__canvas surface">
+          <canvas id="stage-canvas" width="812" height="702" aria-label="pubnyan, interactive"></canvas>
+          <img id="stage-poster" class="stage__poster" src="./assets/still/normal.svg" alt="" width="406" height="351">
+          <p id="stage-status" class="stage__status" aria-live="polite">Loading pubnyan.riv…</p>
+        </div>
+        <div class="stage__controls">
+          <div class="control-group">
+            <h3>Expression <small>sustained</small></h3>
+            <div id="stage-expressions" class="chips" role="group" aria-label="Expression"></div>
+            <p id="stage-note" class="control-note">Listening. An ear catches a sound, a glance, a lean.</p>
+          </div>
+          <div class="control-group">
+            <h3>Reaction <small>one shot</small></h3>
+            <div id="stage-reactions" class="chips" role="group" aria-label="Reaction"></div>
+            <p class="control-note">Click the cat for a wink. Number keys work while the stage is on screen.</p>
+          </div>
+          <div class="control-group control-group--quiet">
+            <h3>Try this</h3>
+            <p class="control-note">Choose <b>shy</b>, then <b>Nod</b>: the nod plays and the shyness stays. Then <b>Celebrate</b>.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Gallery ---------------------------------------------------------------- -->
+    <section id="gallery" class="section" aria-labelledby="gallery-title-h">
+      <div class="section__head">
+        <p class="eyebrow">Every clip</p>
+        <h2 id="gallery-title-h">Performance, not constant movement.</h2>
+        <p class="section__lede">
+          A thought, a small preparation, one readable accent, a hold, and a diminishing
+          recovery. The pupils notice first. The head follows. The ring, one rigid object,
+          counterbalances the cat and settles last.
+        </p>
+      </div>
+      <div class="gallery">
+        <ul id="gallery-list" class="specimens" role="tablist" aria-label="Clips" aria-orientation="vertical"></ul>
+        <figure class="gallery__preview surface">
+          <img id="gallery-preview" src="./assets/still/normal.svg" alt="" width="406" height="351" decoding="async">
+          <figcaption>
+            <div class="gallery__caption">
+              <b id="gallery-title">idle</b>
+              <span id="gallery-meta" class="mono"></span>
+            </div>
+            <p id="gallery-note"></p>
+            <button id="gallery-replay" type="button" class="button button--small" hidden>Replay</button>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- Formats ---------------------------------------------------------------- -->
+    <section id="formats" class="section" aria-labelledby="formats-title">
+      <div class="section__head">
+        <p class="eyebrow">One performance, several stages</p>
+        <h2 id="formats-title">The same wink, in every format.</h2>
+        <p class="section__lede">
+          Each target is rendered in headless Chrome and diffed against the reference
+          sampler before it ships, so what you embed is what was authored.
+        </p>
+      </div>
+      <div class="formats">
+        <div class="formats__player">
+          <div class="tabs" role="tablist" aria-label="Format">
+            <button type="button" role="tab" class="tab" data-format-tab="svg" aria-selected="true">SVG</button>
+            <button type="button" role="tab" class="tab" data-format-tab="lottie" aria-selected="false" tabindex="-1">Lottie</button>
+            <button type="button" role="tab" class="tab" data-format-tab="rive" aria-selected="false" tabindex="-1">Rive</button>
+            <button type="button" role="tab" class="tab" data-format-tab="video" aria-selected="false" tabindex="-1">Video</button>
+          </div>
+          <div id="format-frame" class="format-frame surface" data-size="full">
+            <div id="format-stage" class="format-stage" role="tabpanel"></div>
+          </div>
+          <div class="formats__foot">
+            <button id="format-size" type="button" class="button button--small" aria-pressed="false"><span>Try at avatar size</span></button>
+            <span class="mono">wink · 0.95s · 60fps</span>
+          </div>
+        </div>
+        <div class="formats__detail">
+          <div class="snippet" data-format-snippet="svg">
+            <h3>Animated SVG</h3>
+            <p>Self-contained CSS keyframes. Works in an <code>&lt;img&gt;</code>, a CSS background, or inline. Shapes morph with <code>d: path()</code> (Chromium, Firefox 97+); everything else crossfades and is universal.</p>
+<pre><code>&lt;img src="idle.svg" alt="pubnyan" width="406" height="351"&gt;</code></pre>
+            <ul class="files">
+              <li><a href="./assets/svg/idle.svg" download>idle.svg</a></li>
+              <li><a href="./assets/svg/wink.svg" download>wink.svg</a></li>
+              <li><a href="./assets/svg/celebrate.svg" download>celebrate.svg</a></li>
+              <li><a href="./assets/svg/spinner.svg" download>spinner.svg</a></li>
+              <li><a href="./assets/svg/manifest.json" download>manifest.json</a></li>
+            </ul>
+          </div>
+          <div class="snippet" data-format-snippet="lottie" hidden>
+            <h3>Lottie</h3>
+            <p>One JSON per clip plus a <code>.lottie</code> bundle of all of them. Plays in lottie-web, dotLottie and every native Lottie player.</p>
+<pre><code>lottie.loadAnimation({
+  container, renderer: 'svg', loop: true,
+  path: 'idle.json',
+});</code></pre>
+            <ul class="files">
+              <li><a href="./assets/lottie/idle.json" download>idle.json</a></li>
+              <li><a href="./assets/lottie/wink.json" download>wink.json</a></li>
+              <li><a href="./assets/lottie/celebrate.json" download>celebrate.json</a></li>
+              <li><a href="./assets/lottie/pubnyan.lottie" download>pubnyan.lottie</a> <small>bundle</small></li>
+            </ul>
+          </div>
+          <div class="snippet" data-format-snippet="rive" hidden>
+            <h3>Rive</h3>
+            <p>One <code>.riv</code> per clip, and <code>pubnyan.riv</code> with the <code>main</code> state machine: an <code>expression</code> enum and one trigger per reaction. This is what the stage above runs.</p>
+<pre><code>const cat = new Rive({
+  canvas, src: 'pubnyan.riv',
+  stateMachines: 'main', autoplay: true,
+});
+const inputs = cat.stateMachineInputs('main');
+inputs.find(i =&gt; i.name === 'expression').value = 2; // curious
+inputs.find(i =&gt; i.name === 'reactNod').fire();</code></pre>
+            <ul class="files">
+              <li><a href="./assets/rive/pubnyan.riv" download>pubnyan.riv</a> <small>state machine</small></li>
+              <li><a href="./assets/rive/idle.riv" download>idle.riv</a></li>
+              <li><a href="./assets/rive/wink.riv" download>wink.riv</a></li>
+              <li><a href="./assets/rive/celebrate.riv" download>celebrate.riv</a></li>
+            </ul>
+          </div>
+          <div class="snippet" data-format-snippet="video" hidden>
+            <h3>Video</h3>
+            <p>MP4 for players, animated WebP for the web, GIF for the places that still want one. Rendered frame by frame from the same sampler.</p>
+<pre><code>&lt;video src="idle.mp4" autoplay muted loop playsinline&gt;&lt;/video&gt;</code></pre>
+            <ul class="files">
+              <li><a href="./assets/video/idle.mp4" download>idle.mp4</a></li>
+              <li><a href="./assets/video/idle.webp" download>idle.webp</a></li>
+              <li><a href="./assets/video/idle.gif" download>idle.gif</a></li>
+              <li><a href="./assets/video/celebrate.mp4" download>celebrate.mp4</a></li>
+            </ul>
+          </div>
+          <p class="formats__all">Every clip in every format is in the <a href="./_storybook/">Storybook</a> galleries and in <a href="https://github.com/moreal/pubnyan-live/tree/main/dist"><code>dist/</code></a>.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- How ------------------------------------------------------------------- -->
+    <section id="how" class="section" aria-labelledby="how-title">
+      <div class="section__head">
+        <p class="eyebrow">How it works</p>
+        <h2 id="how-title">Written once. Checked everywhere.</h2>
+      </div>
+      <div class="how">
+        <ol class="pipeline">
+          <li>
+            <span class="pipeline__step">01</span>
+            <h3>Rig</h3>
+            <p>The original artwork is a git submodule. <code>parts.map.json</code> names its paths (head, ears, eyes, ring) and <code>rig:extract</code> turns them into a rig with pivots.</p>
+          </li>
+          <li>
+            <span class="pipeline__step">02</span>
+            <h3>Clip</h3>
+            <p>A clip is a list of tracks: a part, a property, and keys with easings. Amplitudes stay small. pubnyan is a calm cat.</p>
+          </li>
+          <li>
+            <span class="pipeline__step">03</span>
+            <h3>Export</h3>
+            <p>The same intermediate representation is sampled into CSS keyframes, Lottie layers, a Rive artboard with a state machine, and video frames.</p>
+          </li>
+          <li>
+            <span class="pipeline__step">04</span>
+            <h3>Verify</h3>
+            <p>Every target is rendered in headless Chrome and pixel-diffed against the reference sampler. The contact sheet is judged by eye as well.</p>
+          </li>
+        </ol>
+        <figure class="code">
+          <figcaption><code>motion/clips/wink.clip.ts</code></figcaption>
+<pre><code>export default clip('wink', { rig: 'pubnyan', duration: 0.95, fps: 60, loop: false }, [
+  ...['eye-r.white', 'eye-r.pupil'].map((part) =&gt; track(part, 'scale', [
+    key(0, [1, 1]), key(0.13, [1, 1]), key(0.21, [1, 0.08], 'easeIn'),
+    key(0.39, [1, 0.08]), key(0.57, [1, 1], 'outCubic'), key(0.95, [1, 1]),
+  ])),
+  track('head', 'rotation', [
+    key(0, 0), key(0.1, 0.9, 'inOutCubic'), key(0.25, -4, 'outCubic'),
+    key(0.43, -4), key(0.69, 0.55, 'inOutCubic'), key(0.95, 0, 'inOutSine'),
+  ]),
+  track('ear-r', 'rotation', [
+    key(0, 0), key(0.18, 0), key(0.32, -4.5, 'outCubic'),
+    key(0.49, 1.2, 'inOutCubic'), key(0.66, -0.4, 'inOutSine'), key(0.95, 0, 'inOutSine'),
+  ]),
+  ...orbit('rotation', [key(0, 0), key(0.2, 0), key(0.42, 1.5, 'outCubic'), key(0.95, 0, 'inOutSine')]),
+]);</code></pre>
+        </figure>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <div class="foot__grid">
+      <div>
+        <p class="foot__brand"><img src="./assets/still/normal.svg" alt="" width="40" height="35"> pubnyan, live</p>
+        <p id="attribution-text" class="foot__attribution">
+          pubnyan, the Hackers' Pub mascot, by Bak Eunji. CC BY-SA 4.0. https://github.com/hackers-pub/visual-identity
+        </p>
+        <button id="copy-attribution" type="button" class="button button--small">Copy attribution</button>
+      </div>
+      <ul class="foot__links">
+        <li><a href="https://hackers.pub/">Hackers' Pub</a></li>
+        <li><a href="https://github.com/moreal/pubnyan-live">Source on GitHub</a></li>
+        <li><a href="./_storybook/">Storybook</a></li>
+        <li><a href="https://github.com/hackers-pub/visual-identity">Visual identity</a></li>
+      </ul>
+    </div>
+    <p class="foot__legal">
+      Visual identity © 2025 Bak Eunji, <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>.
+      Every exported file carries this attribution and the same license. The code is MIT.
+    </p>
+  </footer>
+
+  <script src="./vendor/rive.js" defer></script>
+  <script src="./vendor/lottie_svg.min.js" defer></script>
+  <script src="./site.js" defer></script>
+</body>
+</html>

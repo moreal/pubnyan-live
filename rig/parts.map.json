@@ -22,9 +22,27 @@
           ]
         },
         {
-          "name": "head",
+          "name": "ring-back",
           "fill": "#000000",
           "parent": "body",
+          "pivot": [
+            220,
+            270
+          ]
+        },
+        {
+          "name": "torso",
+          "fill": "#000000",
+          "parent": "body",
+          "pivot": [
+            203,
+            310
+          ]
+        },
+        {
+          "name": "head",
+          "fill": "#000000",
+          "parent": "torso",
           "pivot": [
             209,
             226
@@ -64,16 +82,6 @@
           "parent": "head"
         },
         {
-          "name": "ring-gap-l",
-          "fill": "#ffffff",
-          "parent": "body"
-        },
-        {
-          "name": "ring-gap-r",
-          "fill": "#ffffff",
-          "parent": "body"
-        },
-        {
           "name": "tear-l",
           "fill": "#ffffff",
           "parent": "head"
@@ -102,18 +110,37 @@
           "name": "mouth",
           "fill": "#000000",
           "parent": "head"
+        },
+        {
+          "name": "ring-front",
+          "fill": "#000000",
+          "parent": "body",
+          "pivot": [
+            220,
+            270
+          ]
+        },
+        {
+          "name": "ring-gap-l",
+          "fill": "#ffffff",
+          "parent": "body"
+        },
+        {
+          "name": "ring-gap-r",
+          "fill": "#ffffff",
+          "parent": "body"
         }
       ],
       "expressions": {
         "normal": {
           "file": "pubnyan-normal-transparent.svg",
           "map": {
-            "body": "path17#outer",
+            "body": null,
             "face": "path7#outer",
             "eye-l.white": "path11#outer",
             "eye-r.white": "path9#outer",
-            "ring-gap-l": "path15",
-            "ring-gap-r": "path13",
+            "ring-gap-l": null,
+            "ring-gap-r": null,
             "eye-l.pupil": "path21",
             "eye-r.pupil": "path19",
             "nose": "path23",
@@ -125,14 +152,14 @@
             "mouth": "mouth-normal",
             "eye-l.pupil": "pupil-l-normal",
             "eye-r.pupil": "pupil-r-normal",
-            "body": "body-articulated",
             "head": "head-articulated",
             "ear-l": "ear-l-articulated",
             "ear-r": "ear-r-articulated",
             "face": "normal-face-aligned",
-            "ring-gap-l": "normal-ring-gap-l-aligned",
-            "ring-gap-r": "normal-ring-gap-r-aligned",
-            "nose": "normal-nose-aligned"
+            "nose": "normal-nose-aligned",
+            "ring-back": "ring-back-articulated",
+            "torso": "torso-articulated",
+            "ring-front": "ring-front-articulated"
           }
         },
         "angry": {
@@ -207,6 +234,21 @@
             "eye-l.pupil": "pupil-l-shy",
             "eye-r.pupil": "pupil-r-shy",
             "nose": "shy-nose-aligned"
+          }
+        },
+        "happy": {
+          "file": "pubnyan-normal-transparent.svg",
+          "map": {
+            "nose": "path23",
+            "mouth": "path25"
+          },
+          "overrides": {
+            "nose": "normal-nose-aligned",
+            "mouth": "mouth-happy",
+            "eye-l.white": "eye-l-happy",
+            "eye-r.white": "eye-r-happy",
+            "eye-l.pupil": "pupil-l-happy",
+            "eye-r.pupil": "pupil-r-happy"
           }
         }
       }

@@ -26,9 +26,15 @@ npm run agent -- 1     # let the Flue director complete one backlog item (needs 
                         # the artist subagent (graphics/visual items) runs on openai-codex/gpt-6-astra and authenticates via a ChatGPT Plus/Pro (Codex) subscription; run `pi login openai-codex` once to connect it
 ```
 
-## Storybook
+## GitHub Pages
 
-The Storybook build is published to GitHub Pages at https://moreal.github.io/pubnyan-live/ on every push to `main` by `.github/workflows/storybook.yml`, and can also be triggered manually via `workflow_dispatch`. One-time setup: in the repository settings, under **Settings → Pages**, set **Source** to **GitHub Actions**.
+`.github/workflows/pages.yml` publishes https://moreal.github.io/pubnyan-live/ on every push to `main` (and via `workflow_dispatch`):
+
+- `/` — the landing page from `site/` (plain HTML/CSS/JS; the Rive and Lottie runtimes are copied from `node_modules`).
+- `/_storybook/` — the Storybook build.
+- `/assets/{svg,lottie,rive,video}/` — the exported clips, `/assets/still/` — the resting poses from `rig/preview/`.
+
+`npm run site:build` assembles all of it in `dist/site` (`scripts/site-build.mjs`; set `STORYBOOK_BASE` to `<pages base>/_storybook/` so the Storybook chunks resolve under the subpath). `npm run site:smoke` serves `dist/site` and checks the landing page and the Storybook subpath in headless Chrome; add `--shots <dir>` for screenshots. One-time setup: in the repository settings, under **Settings → Pages**, set **Source** to **GitHub Actions**.
 
 ## Output notes
 

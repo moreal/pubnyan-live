@@ -16,6 +16,8 @@ import nod from '#motion/clips/nod.clip.ts';
 import tilt from '#motion/clips/tilt.clip.ts';
 import earTwitch from '#motion/clips/ear-twitch.clip.ts';
 import tailFlick from '#motion/clips/tail-flick.clip.ts';
+import ringWobble from '#motion/clips/ring-wobble.clip.ts';
+import celebrate from '#motion/clips/celebrate.clip.ts';
 import toAngry from '#motion/clips/to-angry.clip.ts';
 import fromAngry from '#motion/clips/from-angry.clip.ts';
 import toCurious from '#motion/clips/to-curious.clip.ts';
@@ -40,6 +42,8 @@ export const clips: Clip[] = [
   tilt,
   earTwitch,
   tailFlick,
+  ringWobble,
+  celebrate,
   exprAngry,
   exprCurious,
   exprCry,

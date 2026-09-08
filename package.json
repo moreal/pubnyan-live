@@ -37,7 +37,9 @@
     "storybook:assets": "npm run export:svg && npm run export:lottie && npm run export:rive && npm run export:video",
     "storybook": "storybook dev -p 6007",
     "storybook:build": "storybook build -o .storybook-build && rm -rf dist/storybook && mkdir -p dist && mv .storybook-build dist/storybook",
-    "storybook:smoke": "node scripts/storybook-smoke.mjs"
+    "storybook:smoke": "node scripts/storybook-smoke.mjs",
+    "site:build": "rm -rf dist/site && npm run storybook:build && node scripts/site-build.mjs",
+    "site:smoke": "node scripts/site-smoke.mjs"
   },
   "dependencies": {
     "@flue/runtime": "^2.0.3",

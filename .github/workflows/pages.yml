@@ -1,4 +1,4 @@
-name: storybook
+name: pages
 on:
   push:
     branches: [main]
@@ -20,12 +20,13 @@ jobs:
       - run: npm ci
       - run: sudo apt-get install -y ffmpeg webp
       - run: npm run rig:extract
-      - run: npm run storybook:build
+      # Landing page at the site root, Storybook under /_storybook/ (see scripts/site-build.mjs).
+      - run: npm run site:build
         env:
-          STORYBOOK_BASE: /${{ github.event.repository.name }}/
+          STORYBOOK_BASE: /${{ github.event.repository.name }}/_storybook/
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist/storybook
+          path: dist/site
   deploy:
     needs: build
     runs-on: ubuntu-latest

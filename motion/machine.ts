@@ -14,7 +14,10 @@ export default machine({
     reactNod: { type: 'trigger' },
     reactTilt: { type: 'trigger' },
     reactEarTwitch: { type: 'trigger' },
+    // Deprecated alias retained for existing consumers; this is an orbital gesture.
     reactTailFlick: { type: 'trigger' },
+    reactRingWobble: { type: 'trigger' },
+    reactCelebrate: { type: 'trigger' },
     loading: { type: 'bool', default: false },
   },
   layers: {
@@ -49,13 +52,27 @@ export default machine({
         tilt: { clip: 'tilt', mode: 'once' },
         'ear-twitch': { clip: 'ear-twitch', mode: 'once' },
         'tail-flick': { clip: 'tail-flick', mode: 'once' },
+        'ring-wobble': { clip: 'ring-wobble', mode: 'once' },
       },
       transitions: [
         { from: '*', to: 'wink', when: { input: 'react', fired: true }, duration: 0 },
         { from: '*', to: 'nod', when: { input: 'reactNod', fired: true }, duration: 0 },
         { from: '*', to: 'tilt', when: { input: 'reactTilt', fired: true }, duration: 0 },
         { from: '*', to: 'ear-twitch', when: { input: 'reactEarTwitch', fired: true }, duration: 0 },
+        { from: '*', to: 'ring-wobble', when: { input: 'reactRingWobble', fired: true }, duration: 0 },
         { from: '*', to: 'tail-flick', when: { input: 'reactTailFlick', fired: true }, duration: 0 },
+      ],
+    },
+    celebration: {
+      // Shape-authored performances are full facial overrides in the Rive
+      // exporter. Keep this separate so ordinary reactions preserve emotion.
+      entry: 'none',
+      states: {
+        none: { clip: null, mode: 'once' },
+        celebrate: { clip: 'celebrate', mode: 'once' },
+      },
+      transitions: [
+        { from: '*', to: 'celebrate', when: { input: 'reactCelebrate', fired: true }, duration: 0 },
       ],
     },
   },

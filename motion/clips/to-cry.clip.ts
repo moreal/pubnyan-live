@@ -1,21 +1,27 @@
 import { clip, key, track } from '#ir/clip.ts';
 
-/**
- * Transition into cry, 0.4 s at 60 fps, non-loop. The mouth leads the change; the eyes,
- * pupils, tears, and nose morph starting 2 frames (0.033 s) later. The head dips and tilts
- * slightly and returns to rest by the last key.
- */
+/** A soft blink conceals the topology change into the tear-filled source eyes. */
 const EYE_DELAY = 2 / 60;
 
 const mouth = track('mouth', 'shape', [key(0, 'normal'), key(0.4, 'cry', 'easeInOut')]);
 const morph = (part: string) => track(part, 'shape', [key(EYE_DELAY, 'normal'), key(0.4, 'cry', 'easeInOut')]);
+const eyes = ['eye-l.white', 'eye-r.white', 'eye-l.pupil', 'eye-r.pupil'];
 
 export default clip('to-cry', { rig: 'pubnyan', duration: 0.4, fps: 60, loop: false }, [
   mouth,
-  morph('eye-l.white'),
-  morph('eye-r.white'),
-  morph('eye-l.pupil'),
-  morph('eye-r.pupil'),
+  // Normal and cry eye paths have different topology. Their short crossfade
+  // happens only during the closed hold; pupils disappear before it starts.
+  ...eyes.flatMap(part => [
+    track(part, 'shape', [key(0, 'normal'), key(0.1, 'normal'),
+      key(0.15, 'cry', 'inOutCubic'), key(0.4, 'cry')]),
+    track(part, 'scale', [key(0, [1, 1]), key(1 / 60, [1, 1]),
+      key(0.1, [1, 0.08], 'easeIn'), key(0.15, [1, 0.08]),
+      key(1 / 3, [1, 1], 'outCubic'), key(0.4, [1, 1])]),
+  ]),
+  ...eyes.filter(part => part.endsWith('.pupil')).map(part => track(part, 'opacity', [
+    key(0, 1), key(1 / 30, 1), key(1 / 12, 0, 'easeIn'),
+    key(1 / 6, 0), key(0.2, 1, 'outCubic'), key(0.4, 1),
+  ])),
   morph('tear-l'),
   morph('tear-r'),
   morph('nose'),

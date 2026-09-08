@@ -6,23 +6,26 @@
 
 | part | notes |
 |---|---|
-| body | lower body and orbital ring; pivot `[203, 330]`. The original contour is partitioned in the override SVG. |
-| head | actual black head and whisker silhouette with a concealed chin overlap; child of body, pivot `[209, 226]`. Facial features follow this joint. |
+| body | transform-only root; pivot `[203, 330]`. Whole-character movement carries the torso and orbit together. |
+| ring-back | rear orbital band; child of body, pivot `[220, 270]`. |
+| torso | separate cat body; child of body, pivot `[203, 310]`. Breathing carries the head, while the orbit can follow later. |
+| head | actual black head and whisker silhouette with a concealed chin overlap; child of torso, pivot `[209, 226]`. Facial features follow this joint. |
 | ear-l, ear-r | original ear contours with overlapping roots; children of head, pivots `[138, 70]` and `[288, 63]`. |
 | face | white star-shaped muzzle |
 | eye-l.white, eye-r.white | white eye shapes; the expression variants change shape (slits, crescents, closed lines) |
-| ring-gap-l, ring-gap-r | white slivers where the ring's inner edge shows; animate these to suggest the ring turning |
 | tear-l, tear-r | hidden except in `cry` |
 | eye-l.pupil, eye-r.pupil | visible in every open-eye expression; compatible override paths keep gaze continuous during morphs |
 | nose, mouth | black features on the face |
+| ring-front | front orbital band; child of body, pivot `[220, 270]`. Rendered above the torso and head subtree. |
+| ring-gap-l, ring-gap-r | hidden compatibility joints; the ring openings are now transparent geometry, never animated white masks. |
 
-Expressions: normal, angry, curious, cry, shy. Left and right are the viewer's.
+Expressions: normal, angry, curious, cry, shy, happy (curved smiling eyes, contracting pupils, and an open smile). Left and right are the viewer's.
 
 ## Expressions inherit the default
 
 `default` (here `normal`) supplies every part's default path. In any other expression's `map`:
 
-- **absent** — the part keeps its default path. Body, face and the ring gaps are absent everywhere, so every expression wears the same silhouette instead of a near-identical copy with a different vertex count.
+- **absent** — the part keeps its default path. Torso, orbit, and face are absent from the non-default maps, so every expression wears the same silhouette instead of a near-identical copy with a different vertex count.
 - **selector** — the part takes that path from the expression's own file.
 - **`null`** — the part is hidden in this expression. Do not hide pupils merely to suggest a lowered eyelid; author the visible pupil contour within the eye instead.
 
@@ -38,8 +41,10 @@ Selectors: `id` = all subpaths, `id#outer` = largest subpath (the outline; holes
 
 ## Articulated silhouette and motion gutters
 
-The source logo remains untouched. `overrides/pubnyan-eyes-mouth.svg` partitions its exact outer contour into body/ring, head/whiskers, and two ears. Closing curves overlap inside the black silhouette so the star muzzle follows the head without sliding over a fixed duplicate outline. The ring gaps remain body children and render over the neck overlap.
+The source logo remains untouched. `overrides/pubnyan-eyes-mouth.svg` partitions its exact visible contours into torso, orbital back/front bands, head/whiskers, and two ears. This character has **no tail**. Closing curves overlap inside the black silhouette so the star muzzle follows the head without sliding over a fixed duplicate outline. The source ring-gap curves define the actual exposed inner boundaries of the orbit and torso; the openings are transparent. Hidden continuation curves complete the orbital arc behind the torso. The rear band extends slightly into the front along exact subdivisions of the source curves, eliminating antialias cracks at their shared edges without changing the ring outline.
+
+Animate **both `ring-back` and `ring-front` with identical position, rotation, and scale keys**. Their pivots match. A shared ring parent would force both bands into one SVG subtree and destroy the front/torso/back draw order, so both are direct children of `body`. The `torso` owns `head`, which owns ears and facial features; list parts depth-first to preserve identical stacking in the sampler and SVG exporter.
 
 The pubnyan artboard is **406 × 351**, with a **16 px gutter on every side** of the original 374 × 319 artwork. A single `translate(16 16)` group in the override SVG shifts all paths, including source-derived expression paths already aligned to the normal nose. Explicit joint pivots shift by the same amount; other pivots are extracted from their paths. This gives head turns and ear follow-through room without clipping or requiring every clip to move the character downward.
 
-Use head rotations around ±4° and ear accents around ±6°; inspect the neck and ear-root joins at the motion extremes. The rest-outline regression test compares the union of the four articulated black pieces against the source silhouette, allowing only raster antialiasing differences. Pupil containment samples the complete artboard, so future coordinate changes cannot silently evade the check.
+Use ring rotations around ±4°, head rotations around ±4°, and ear accents around ±6°; inspect the neck and ear-root joins at the motion extremes. The rest-outline regression test compares the union of the six articulated black pieces against the source silhouette with its two original ring openings, allowing only raster antialiasing differences. Pupil containment samples the complete artboard, so future coordinate changes cannot silently evade the check.

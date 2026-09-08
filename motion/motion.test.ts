@@ -50,8 +50,8 @@ describe('motion smoothness guard', () => {
 
     // Expression transitions (`to-*`/`from-*`) carry `shape` tracks and are meant to leave
     // pubnyan in a new expression, not return to rest; the "return to start" guard below is
-    // for one-shot reactions (nod, tilt, wink, ...), which have no `shape` track.
-    const isStateTransition = clip.tracks.some((tr) => tr.property === 'shape');
+    // for one-shot reactions, including celebrate, whose smile shape also returns to rest.
+    const isStateTransition = /^(to|from)-/.test(clip.name);
 
     if (!clip.loop && !isStateTransition) {
       test(`${clip.name}: every track returns to its first key`, () => {
@@ -144,13 +144,13 @@ describe('motion smoothness guard', () => {
                 );
               }
             }
-          } else if (track.property === 'scale' && track.part === 'body') {
+          } else if (track.property === 'scale' && ['body', 'torso'].includes(track.part)) {
             for (let t = 0; t <= clip.duration + FLOAT_SLACK; t += dt) {
               const [sx, sy] = sampleVec2(track as Track<'scale'>, t);
               for (const [axis, v] of [['x', sx], ['y', sy]] as const) {
                 if (Math.abs(v - 1) > PUBNYAN_BODY_SCALE_DELTA + FLOAT_SLACK) {
                   throw new Error(
-                    `clip "${clip.name}" track "body.scale" exceeds 1 +- ${PUBNYAN_BODY_SCALE_DELTA} on ${axis} at t=${t.toFixed(4)}: ${v}`,
+                    `clip "${clip.name}" track "${track.part}.scale" exceeds 1 +- ${PUBNYAN_BODY_SCALE_DELTA} on ${axis} at t=${t.toFixed(4)}: ${v}`,
                   );
                 }
               }

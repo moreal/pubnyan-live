@@ -19,7 +19,7 @@ test.each(['curious', 'shy', 'angry'])('%s keeps both pupils visible and morphab
 
 test('pupils stay inside the eyes throughout glances, blinks, and expression morphs', async () => {
   const rig = getRig('pubnyan');
-  const selected = clips.filter((clip) => ['idle','wink','nod','head-turn'].includes(clip.name) || /(?:curious|shy|angry)$/.test(clip.name));
+  const selected = clips.filter((clip) => ['idle','wink','nod','head-turn','tilt','ear-twitch','ring-wobble','celebrate','to-cry','from-cry'].includes(clip.name) || /(?:curious|shy|angry)$/.test(clip.name));
   const samples = selected.flatMap((clip) => sampleTimes(clip).map((t) => {
     const parts = sampleClip(rig, clip, t).filter((p) => p.name.startsWith('eye-'));
     // Bound the scan from the transformed geometry, not old canvas coordinates.
@@ -50,4 +50,16 @@ test('pupils stay inside the eyes throughout glances, blinks, and expression mor
     </script>`);
     expect(overflow).toEqual([]);
   } finally { await renderer.close(); }
+});
+
+test('a reopening blink restores pupils before the eyes become broad white ovals', async () => {
+  const { blink } = await import('./clips/expression-motion.ts');
+  const { sampleNumeric, sampleVec2 } = await import('#ir/sample.ts');
+  const tracks = blink(1, 0.1);
+  const lid = tracks.find(t => t.part === 'eye-l.white' && t.property === 'scale')!;
+  const pupil = tracks.find(t => t.part === 'eye-l.pupil' && t.property === 'opacity')!;
+  for (let t = 0.22; t <= 0.4; t += 1 / 240) {
+    const height = sampleVec2(lid as import('#ir/types.ts').Track<'scale'>, t)[1];
+    if (height >= 0.5) expect(sampleNumeric(pupil as import('#ir/types.ts').Track<'opacity'>, t), `blank eye at ${t}`).toBeGreaterThanOrEqual(0.8);
+  }
 });

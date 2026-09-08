@@ -16,9 +16,10 @@ Run `npm run verify` after editing. It exports every target, compares frames aga
 
 ## Sustained expressions
 
-`idle` is a quiet six-second breath with an eye-led head turn and one blink. `expr-curious`,
+`idle` is a six-second listening performance: one ear catches a sound, the eyes lead
+a prepared head turn, a second inquisitive tilt holds, and one blink releases it. `expr-curious`,
 `expr-cry`, `expr-shy`, and `expr-angry` are complete looping performances: a held
-investigative lean, two unequal sobs with falling tears, a bashful downward glance,
+investigative lean, two unequal sobs with falling tears, a bashful downward glance with a brief open-eyed peek,
 and a restrained huff. Each includes pauses and returns to its opening pose.
 
 The expression layer plays these loops directly, blending between states. It owns
@@ -28,8 +29,10 @@ that explicitly sequence transitions. `expression-motion.ts` shares the blink,
 breathing, and expression-shape vocabulary; timings remain local to each clip.
 
 The silhouette is articulated: `head` carries the black cheeks, whiskers and
-facial features; `ear-l` and `ear-r` are its children. The lower body and ring stay
-together. Head rotations around 4 degrees and independent ear accents around
+facial features; `ear-l` and `ear-r` are its children. `torso` carries the cat,
+while `ring-back` and `ring-front` surround it as separate layers. Both ring halves
+share a pivot and identical tracks through `ring-motion.ts`; their holes are
+transparent geometry, not white overlays. `body` remains the common transform root. Head rotations around 4–5 degrees and independent ear accents around
 6 degrees now read as physical gestures. The 406 × 351 artboard includes 16 px
 gutters so these poses have room. Keep the white star muzzle rigid relative to
 the head. Tear transforms use translation, not scale about their default [0, 0] pivot;
@@ -56,5 +59,63 @@ offer explicit playback or a static expression for reduced-motion users.
 Review anticipation, the accented pose, the hold, and recovery at normal speed,
 then scrub the neck, ear roots and eye contours. `nod` closes its eyes on the down
 accent, `wink` leans into one closed eye, and `ear-twitch` now actually articulates
-the ears with an asymmetric delay. The historical `tail-flick` input remains a
-ring-gap gesture because the mascot has no tail.
+the ears with an asymmetric delay. The historical `tail-flick` clip and `reactTailFlick` input are compatibility
+aliases for `ring-wobble`. Pubnyan has no tail; new integrations should use
+`ring-wobble` / `reactRingWobble`.
+
+### Performance polish
+
+The main accent is preceded by a small counter-pose and followed by a smaller
+rebound. Ears answer at different times and settle after the head. The independent ring
+answers the cat with a delayed countertilt and settles last. The angry huff pins the ears, the two unequal sobs leave
+soft ear drag, and shy briefly opens its eyes before tucking back in. Wink holds
+one closed lid for 180 ms so it reads as an intentional gesture at avatar size.
+Nod translates the body instead of stretching the star muzzle.
+
+One-shot durations: nod 0.85 s, wink 0.95 s, tilt 1.2 s, head-turn 1.4 s,
+ear-twitch 0.75 s, `ring-wobble` (also the legacy `tail-flick`) 1.8 s, and `celebrate` 1.5 s. Consumers
+should use the exported manifest duration instead of hardcoded timers.
+
+
+### Orbital acting
+
+`ring-wobble` looks down at the ring, follows its roll to the opposite side, then
+blinks as it settles. `celebrate` compresses, rises through the ring with a held
+curved happy lids and an open smile, lands, and rebounds once. The ring lags
+behind the cat, preserving its front/back occlusion and solid weight. Trigger it
+with `reactCelebrate` in the exported machines. The `happy` rig shape is an accent
+for the smiling eyes and mouth; it does not add another sustained emotion input.
+
+All cat/torso scale changes remain within 2%, translations within 8 px and joint
+rotations within 6°. The star muzzle follows the head without separate distortion.
+`motion/ring-motion.test.ts` protects synchronized ring halves and new triggers;
+`motion/eyes.test.ts` also guards against blank white eyes during blink reopening.
+
+Character vocabulary to build on: listening, a curious lean, a bashful peek,
+a restrained huff, a soft sob, acknowledging nods, a conspiratorial wink,
+orbital balancing and buoyant celebration. Do not invent a tail, paws or a walk
+cycle absent from the source drawing.
+
+The `celebration` machine layer is separate from ordinary `reaction` overlays.
+It temporarily owns the full face (including the happy smile), then releases all
+channels to the continuing emotion. Keeping shape changes out of `reaction`
+allows nods, winks and ring gestures to preserve an angry or crying expression.
+`motion/reaction-layer.test.ts` checks active reactions and the release in Rive.
+
+After exporting, run `node scripts/motion-contact-review.mjs` for compact
+`dist/verify/<clip>-review.png` sheets with eight selected poses and all four
+renderer rows. Optional clip-name arguments limit the set. These include exact
+loop endpoints and stay below Chrome's large-screenshot width limit; exhaustive
+key/midpoint comparison remains the responsibility of `npm run verify`.
+
+The latest visual pass gives `idle` a held torso lean and `ring-wobble` an
+opposing torso roll, so attention and balance read through the whole silhouette.
+The default mouth again matches the source SVG’s small triangular smile.
+Celebration morphs into curved happy lids with pupils contracting into the lids
+before fading; the reopening stays contained. See [acting direction](../docs/motion-direction.md)
+for the source-grounded movement vocabulary and visual review criteria.
+
+Standalone `to-cry` and `from-cry` now exchange their incompatible eye geometry
+during a closed blink, with pupils hidden through the swap. `from-cry` starts
+from the sustained loop’s neutral head pose. Direct machine emotion blending
+continues to use its existing crossfade rather than these standalone clips.

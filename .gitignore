@@ -9,3 +9,4 @@ rig/inspect/
 .superpowers/
 .worktrees/
 .agent-loop.lock
+dist/site/
