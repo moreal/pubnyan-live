@@ -20,6 +20,7 @@ Committing:
 - Agents do not run `git commit`; the `git_commit` tool does it for them. It runs `npm run check` and refuses on failure, and it commits only on `agent/backlog` (created from HEAD when missing, checked out when it already exists). It leaves HEAD on `agent/backlog`.
 - Humans working by hand run `npm run check` before committing, and merge `agent/backlog` into `main` after looking at the contact sheets.
 - The Reviewer is read-only by instruction only: Flue delegates share the parent's tools, so nothing mechanically stops it from writing. The commit gate and the human review of the PR are the real backstop.
+- Commit messages get a `Co-Authored-By:` trailer for the authoring agent, but never a `Claude-Session:` (or similar session-URL) trailer — session links are ephemeral and don't belong in permanent history.
 
 ## Commands
 
