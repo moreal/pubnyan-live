@@ -20,7 +20,7 @@
     {
       "name": "head-turn",
       "rig": "pubnyan",
-      "duration": 1.2,
+      "duration": 1.4,
       "fps": 60,
       "loop": false,
       "file": "head-turn.svg"
@@ -28,7 +28,7 @@
     {
       "name": "wink",
       "rig": "pubnyan",
-      "duration": 1,
+      "duration": 0.9,
       "fps": 60,
       "loop": false,
       "file": "wink.svg"
@@ -36,7 +36,7 @@
     {
       "name": "nod",
       "rig": "pubnyan",
-      "duration": 0.7,
+      "duration": 0.8,
       "fps": 60,
       "loop": false,
       "file": "nod.svg"
@@ -44,7 +44,7 @@
     {
       "name": "tilt",
       "rig": "pubnyan",
-      "duration": 0.9,
+      "duration": 1.1,
       "fps": 60,
       "loop": false,
       "file": "tilt.svg"
@@ -52,7 +52,7 @@
     {
       "name": "ear-twitch",
       "rig": "pubnyan",
-      "duration": 0.35,
+      "duration": 0.65,
       "fps": 60,
       "loop": false,
       "file": "ear-twitch.svg"
@@ -68,7 +68,7 @@
     {
       "name": "expr-angry",
       "rig": "pubnyan",
-      "duration": 0.1,
+      "duration": 4.6,
       "fps": 60,
       "loop": true,
       "file": "expr-angry.svg"
@@ -76,7 +76,7 @@
     {
       "name": "expr-curious",
       "rig": "pubnyan",
-      "duration": 0.1,
+      "duration": 5.4,
       "fps": 60,
       "loop": true,
       "file": "expr-curious.svg"
@@ -84,7 +84,7 @@
     {
       "name": "expr-cry",
       "rig": "pubnyan",
-      "duration": 0.1,
+      "duration": 4.8,
       "fps": 60,
       "loop": true,
       "file": "expr-cry.svg"
@@ -92,7 +92,7 @@
     {
       "name": "expr-shy",
       "rig": "pubnyan",
-      "duration": 0.1,
+      "duration": 5.6,
       "fps": 60,
       "loop": true,
       "file": "expr-shy.svg"

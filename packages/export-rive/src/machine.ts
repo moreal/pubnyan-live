@@ -9,20 +9,22 @@
  *     zero-duration `StateTransition`) to that layer's `entry` state, an `AnyState` holding every
  *     `from: '*'` transition (any OTHER named `from` attaches to that state directly), and one
  *     `AnimationState` per named state (a `clip: null` state gets an out-of-range `animationId`:
- *     harmless, since nothing ever calls `advance()` on it here, and it keeps every state a real
- *     `AnimationState` rather than a second, unregistered state type),
+ *     the runtime treats that as an empty animation, allowing completed overlays to release
+ *     their channels without keying a neutral pose over the expression layer),
  *   - `StateTransition`s carrying a `TransitionNumberCondition` / `TransitionBoolCondition` /
  *     `TransitionTriggerCondition` per `MachineTransition.when`.
  *
- * This is not a parity target (no shape morphing/crossfading: every part's Shape is built once,
- * at rest, from `RigPart.path`, and each `LinearAnimation` only keys transform/opacity tracks) —
- * it exists to prove the state machine graph loads and exposes the inputs `motion/machine.ts`
- * declares, per the backlog item's own acceptance check (`stateMachineInputs()` names).
+ * Compatible expression paths share keyed vertices; incompatible paths crossfade.
+ * Full expression states explicitly reset neutral channels. Reaction overlays key
+ * only the channels they own. Runtime tests compare the combined file's faces to
+ * the reference sampler, not merely its list of input names.
  */
 import { EASES } from '#ir/easing.ts';
-import { groupTracks, type TracksByProperty } from '#ir/sample.ts';
+import { interpolatePath } from '#ir/path.ts';
+import { key, track } from '#ir/clip.ts';
+import { groupTracks, resolvePath, sampleShape, sampleNumeric, type TracksByProperty } from '#ir/sample.ts';
 import type { Clip, EaseName, Machine, MachineTransition, Rig, RigPart, Vec2 } from '#ir/types.ts';
-import { splitSubpaths, subpathToVertices } from '#export-rive/index.ts';
+import { splitSubpaths, subpathToVertices, type VertexData } from '#export-rive/index.ts';
 import { KEYS } from '#export-rive/keys.generated.ts';
 import { RivWriter } from '#export-rive/writer.ts';
 
@@ -96,6 +98,7 @@ const ANIMATION_ID = KEYS.AnimationState!.properties.animationId!.key;
 const STATE_TO_ID = KEYS.StateTransition!.properties.stateToId!.key;
 const TRANSITION_FLAGS = KEYS.StateTransition!.properties.flags!.key;
 const TRANSITION_DURATION = KEYS.StateTransition!.properties.duration!.key;
+const TRANSITION_EXIT_TIME = KEYS.StateTransition!.properties.exitTime!.key;
 const CONDITION_INPUT_ID = KEYS.TransitionInputCondition!.properties.inputId!.key;
 const CONDITION_OP_VALUE = KEYS.TransitionValueCondition!.properties.opValue!.key;
 const CONDITION_NUMBER_VALUE = KEYS.TransitionNumberCondition!.properties.value!.key;
@@ -114,8 +117,8 @@ interface FrameValue {
   ease?: EaseName;
 }
 
-/** Builds the combined rig + all-clips + state-machine `.riv` bytes. `clips` only needs to contain
- * (at least) every clip a `machine` state names; extras are ignored. */
+/** Builds one shared artboard with all supplied clips for this rig and the state
+ * graph. Include every referenced clip; extra clips remain available for scrubbing. */
 export function exportRiveMachine(rig: Rig, clips: Clip[], machine: Machine): Buffer {
   const w = new RivWriter();
   const clipsByName = new Map(clips.map((c) => [c.name, c]));
@@ -151,47 +154,69 @@ export function exportRiveMachine(rig: Rig, clips: Clip[], machine: Machine): Bu
     nodeIndexByPart.set(part.name, nodeIndex);
   }
 
-  // Pass 2: one rest-pose Shape per part with geometry, back to front (see `exportRive`).
-  const shapeIndexByPart = new Map<string, number>();
-  for (const part of [...rig.parts].reverse()) {
-    if (!part.path) continue;
-    const nodeIndex = nodeIndexByPart.get(part.name)!;
-    const shapeIndex = add(SHAPE, [[PARENT_ID, nodeIndex]]);
-    for (const [i, sub] of splitSubpaths(part.path).entries()) {
-      const pathIndex = add(POINTS_PATH, [
-        [PARENT_ID, shapeIndex],
-        [NAME, `${part.name}-${i}`],
-        [IS_CLOSED, 1],
-      ]);
-      for (const v of subpathToVertices(sub, part.pivot)) {
-        add(CUBIC_DETACHED_VERTEX, [
-          [PARENT_ID, pathIndex],
-          [VERTEX_X, v.x],
-          [VERTEX_Y, v.y],
-          [IN_ROTATION, v.inRotation],
-          [IN_DISTANCE, v.inDistance],
-          [OUT_ROTATION, v.outRotation],
-          [OUT_DISTANCE, v.outDistance],
-        ]);
-      }
-    }
-    const fillIndex = add(FILL, [[PARENT_ID, shapeIndex]]);
-    add(SOLID_COLOR, [
-      [PARENT_ID, fillIndex],
-      [COLOR_VALUE, part.fill],
-    ]);
-    shapeIndexByPart.set(part.name, shapeIndex);
-  }
-
-  // Every clip a machine state names becomes one `LinearAnimation`; `animationIdByClip` records
-  // each one's index in `Artboard::animation()`'s order, i.e. the order their `LinearAnimation`
-  // objects appear in the file (see `exportRive`'s identical assumption for a single clip).
-  const referencedClipNames: string[] = [];
+  // All supplied animations share one artboard. Compatible paths share vertices,
+  // so native state transitions can interpolate eyes and pupils; incompatible
+  // geometry (e.g. tears appearing) uses separate, opacity-keyed shapes.
+  const referencedClipNames = clips.filter((clip) => clip.rig === rig.name).map((clip) => clip.name);
   for (const layer of Object.values(machine.layers)) {
     for (const state of Object.values(layer.states)) {
-      if (state.clip && !referencedClipNames.includes(state.clip)) referencedClipNames.push(state.clip);
+      if (state.clip && !referencedClipNames.includes(state.clip)) {
+        throw new Error(`export-rive: machine references missing clip "${state.clip}"`);
+      }
     }
   }
+  // Overlay layers author only their own channels, preserving the expression below.
+  const partialClipNames = new Set<string>();
+  for (const layer of Object.values(machine.layers)) {
+    const owned = Object.values(layer.states).flatMap((state) => state.clip ? [state.clip] : []);
+    if (!owned.some((name) => clipsByName.get(name)?.tracks.some((tr) => tr.property === 'shape'))) {
+      for (const name of owned) partialClipNames.add(name);
+    }
+  }
+  interface Geometry {
+    path: string;
+    shapeIndex: number;
+    vertices: number[][];
+    rest: VertexData[][];
+  }
+  const geometryByPart = new Map<string, Geometry[]>();
+  for (const part of [...rig.parts].reverse()) {
+    const paths = new Set<string>();
+    if (part.path) paths.add(part.path);
+    for (const name of referencedClipNames) {
+      const shape = groupTracks(clipsByName.get(name)!).get(part.name)?.shape;
+      for (const k of shape?.keys ?? []) {
+        const path = resolvePath(rig, part, k.v);
+        if (path) paths.add(path);
+      }
+    }
+    const representatives: string[] = [];
+    for (const path of paths) {
+      if (!representatives.some((other) => interpolatePath(other, path, 0) !== null)) representatives.push(path);
+    }
+    const geometries: Geometry[] = [];
+    for (const [g, path] of representatives.entries()) {
+      const shapeIndex = add(SHAPE, [
+        [PARENT_ID, nodeIndexByPart.get(part.name)!],
+        [NODE_OPACITY, part.path && interpolatePath(path, part.path, 0) !== null ? 1 : 0],
+      ]);
+      const vertices: number[][] = [];
+      const rest = splitSubpaths(path).map((sub) => subpathToVertices(sub, part.pivot));
+      for (const [s, values] of rest.entries()) {
+        const pathIndex = add(POINTS_PATH, [[PARENT_ID, shapeIndex], [NAME, `${part.name}-${g}-${s}`], [IS_CLOSED, 1]]);
+        vertices.push(values.map((v) => add(CUBIC_DETACHED_VERTEX, [
+          [PARENT_ID, pathIndex], [VERTEX_X, v.x], [VERTEX_Y, v.y],
+          [IN_ROTATION, v.inRotation], [IN_DISTANCE, v.inDistance],
+          [OUT_ROTATION, v.outRotation], [OUT_DISTANCE, v.outDistance],
+        ])));
+      }
+      const fill = add(FILL, [[PARENT_ID, shapeIndex]]);
+      add(SOLID_COLOR, [[PARENT_ID, fill], [COLOR_VALUE, part.fill]]);
+      geometries.push({path, shapeIndex, vertices, rest});
+    }
+    geometryByPart.set(part.name, geometries);
+  }
+
   const animationIdByClip = new Map<string, number>();
   const FPS_SCALE = 1000; // see `exportRive`'s identical comment: keeps keyed seconds on exact frames.
 
@@ -237,7 +262,13 @@ export function exportRiveMachine(rig: Rig, clips: Clip[], machine: Machine): Bu
 
     const byPart = groupTracks(clip);
     for (const part of rig.parts) {
-      const tracks: TracksByProperty = byPart.get(part.name) ?? {};
+      const tracks: TracksByProperty = { ...byPart.get(part.name) };
+      if (!partialClipNames.has(clipName)) {
+        // Explicit neutral values release channels authored by the previous state.
+        tracks.position ??= track(part.name, 'position', [key(0, [0, 0])]);
+        tracks.rotation ??= track(part.name, 'rotation', [key(0, 0)]);
+        tracks.scale ??= track(part.name, 'scale', [key(0, [1, 1])]);
+      }
       const nodeIndex = nodeIndexByPart.get(part.name);
       if (nodeIndex === undefined) continue;
       const parentPart: RigPart | undefined = part.parent ? partByName.get(part.parent) : undefined;
@@ -261,14 +292,58 @@ export function exportRiveMachine(rig: Rig, clips: Clip[], machine: Machine): Bu
           writeDoubleTrack(NODE_SCALE_Y, tracks.scale.keys.map((k) => ({ frame: toFrame(k.t), value: k.v[1], ease: k.ease })));
         }
       }
-      if (tracks.opacity) {
-        const shapeIndex = shapeIndexByPart.get(part.name);
-        if (shapeIndex !== undefined) {
-          w.object(KEYED_OBJECT, [[KEYED_OBJECT_ID, shapeIndex]]);
-          writeDoubleTrack(NODE_OPACITY, tracks.opacity.keys.map((k) => ({ frame: toFrame(k.t), value: k.v, ease: k.ease })));
+      if (!partialClipNames.has(clipName) || tracks.shape || tracks.opacity) {
+        const changing = tracks.shape && new Set(tracks.shape.keys.map((k) => k.v)).size > 1;
+        // Bake Cartesian path interpolation before converting handles to Rive's
+        // polar representation. Four samples per output frame also cover rapid blinks.
+        const times = changing
+          ? [...new Set([0, clip.duration, ...tracks.shape!.keys.map((k) => k.t),
+              ...Array.from({length: Math.ceil(clip.duration * clip.fps * 4) + 1},
+                (_, f) => Math.min(clip.duration, f / (clip.fps * 4)))])].sort((a,b) => a-b)
+          : [0];
+        const shapes = times.map((t) => sampleShape(rig, part, tracks.shape, t));
+        for (const geometry of geometryByPart.get(part.name) ?? []) {
+          const samples = shapes.map((entries) => entries.find((entry) => interpolatePath(geometry.path, entry.d, 0) !== null));
+          w.object(KEYED_OBJECT, [[KEYED_OBJECT_ID, geometry.shapeIndex]]);
+          const opacity = tracks.opacity;
+          if (!changing) {
+            const weight = samples[0]?.opacity ?? 0;
+            writeDoubleTrack(NODE_OPACITY, (opacity?.keys ?? [key(0, 1)]).map((k) => ({
+              frame: toFrame(k.t), value: weight * k.v, ease: k.ease,
+            })));
+          } else {
+            writeDoubleTrack(NODE_OPACITY, times.map((t,i) => ({
+              frame: toFrame(t), value: (samples[i]?.opacity ?? 0) * (opacity ? sampleNumeric(opacity, t) : 1),
+            })));
+          }
+          const perTime = samples.map((sample) => sample
+            ? splitSubpaths(sample.d).map((sub) => subpathToVertices(sub, part.pivot))
+            : geometry.rest);
+          const properties: [number, keyof VertexData][] = [
+            [VERTEX_X, 'x'], [VERTEX_Y, 'y'], [IN_ROTATION, 'inRotation'],
+            [IN_DISTANCE, 'inDistance'], [OUT_ROTATION, 'outRotation'], [OUT_DISTANCE, 'outDistance'],
+          ];
+          for (const [s, ids] of geometry.vertices.entries()) {
+            for (const [j, id] of ids.entries()) {
+              w.object(KEYED_OBJECT, [[KEYED_OBJECT_ID, id]]);
+              for (const [property, field] of properties) {
+                let previous = geometry.rest[s]![j]![field];
+                const values = times.map((t,i) => {
+                  let value = perTime[i]![s]![j]![field];
+                  if (field === 'inRotation' || field === 'outRotation') {
+                    while (value - previous > Math.PI) value -= 2 * Math.PI;
+                    while (value - previous < -Math.PI) value += 2 * Math.PI;
+                  }
+                  previous = value;
+                  return {frame: toFrame(t), value};
+                });
+                writeDoubleTrack(property, values.filter((v,i) => i === 0 || i === values.length - 1
+                  || v.value !== values[i-1]!.value || v.value !== values[i+1]!.value));
+              }
+            }
+          }
         }
       }
-      // Shape morphing/crossfading is intentionally not authored here (see the file doc comment).
     }
   }
 
@@ -324,14 +399,17 @@ export function exportRiveMachine(rig: Rig, clips: Clip[], machine: Machine): Bu
    * in seconds and, unless omitted, one condition per `when`. An omitted `when` (only used for the
    * `EntryState`'s own transition) leaves the `StateTransition` with zero conditions, which
    * `StateTransition::allowed()` trivially passes — i.e. unconditional. */
-  const writeTransition = (toName: string, duration: number, when: MachineTransition['when'] | undefined, stateIndex: Map<string, number>): void => {
+  const writeTransition = (toName: string, duration: number, when: MachineTransition['when'] | undefined, stateIndex: Map<string, number>, exitAtEnd = false): void => {
     const stateToId = stateIndex.get(toName);
     if (stateToId === undefined) throw new Error(`export-rive: transition targets unknown state "${toName}"`);
-    w.object(STATE_TRANSITION, [
+    const properties: [number, number | string][] = [
       [STATE_TO_ID, stateToId],
-      [TRANSITION_FLAGS, 0],
+      // state_transition_flags.hpp: early exit=32, enabled percentage exit=4|8.
+      [TRANSITION_FLAGS, exitAtEnd ? 4 | 8 : 32],
       [TRANSITION_DURATION, Math.round(duration * 1000)],
-    ]);
+    ];
+    if (exitAtEnd) properties.push([TRANSITION_EXIT_TIME, 100]);
+    w.object(STATE_TRANSITION, properties);
     if (when) writeCondition(when);
   };
 
@@ -376,6 +454,12 @@ export function exportRiveMachine(rig: Rig, clips: Clip[], machine: Machine): Bu
       const animationId = state.clip ? animationIdByClip.get(state.clip)! : NO_ANIMATION_ID;
       w.object(ANIMATION_STATE, [[ANIMATION_ID, animationId]]);
       for (const tr of namedTransitionsByFrom.get(name) ?? []) writeTransition(tr.to, tr.duration, tr.when, stateIndex);
+      // Release one-shot overlays; holding their last key would pin the face at
+      // rest and suppress the expression's subsequent glances and breathing.
+      if (state.clip && state.mode === 'once' && !clipsByName.get(state.clip)!.loop
+        && layer.states[layer.entry]!.clip === null && !namedTransitionsByFrom.has(name)) {
+        writeTransition(layer.entry, 0.12, undefined, stateIndex, true);
+      }
     }
   }
 
