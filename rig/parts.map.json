@@ -168,14 +168,14 @@
             "nose": "path49",
             "eye-l.white": "path47#outer",
             "eye-r.white": "path43#outer",
-            "mouth": "path57"
+            "mouth": "path57",
+            "eye-l.pupil": null,
+            "eye-r.pupil": null
           },
           "overrides": {
             "eye-l.white": "eye-l-angry",
             "eye-r.white": "eye-r-angry",
             "mouth": "mouth-angry",
-            "eye-l.pupil": "pupil-l-angry",
-            "eye-r.pupil": "pupil-r-angry",
             "nose": "angry-nose-aligned"
           }
         },
@@ -185,14 +185,14 @@
             "nose": "path39",
             "eye-l.white": "path27#outer",
             "eye-r.white": "path29#outer",
-            "mouth": "path41"
+            "mouth": "path41",
+            "eye-l.pupil": null,
+            "eye-r.pupil": null
           },
           "overrides": {
             "eye-l.white": "eye-l-curious",
             "eye-r.white": "eye-r-curious",
             "mouth": "mouth-curious",
-            "eye-l.pupil": "pupil-l-curious",
-            "eye-r.pupil": "pupil-r-curious",
             "nose": "curious-nose-aligned"
           }
         },
@@ -225,14 +225,14 @@
             "nose": "path89",
             "eye-l.white": "path85#outer",
             "eye-r.white": "path83#outer",
-            "mouth": "path111"
+            "mouth": "path111",
+            "eye-l.pupil": null,
+            "eye-r.pupil": null
           },
           "overrides": {
             "eye-l.white": "eye-l-shy",
             "eye-r.white": "eye-r-shy",
             "mouth": "mouth-shy",
-            "eye-l.pupil": "pupil-l-shy",
-            "eye-r.pupil": "pupil-r-shy",
             "nose": "shy-nose-aligned"
           }
         },

@@ -1,10 +1,7 @@
 import { clip, key, track } from '#ir/clip.ts';
+import { sourceEyeTransition } from './expression-motion.ts';
 
-/**
- * Transition into shy, 0.4 s at 60 fps, non-loop. The mouth leads the change; the eyes,
- * pupils, and nose morph starting 2 frames (0.033 s) later. The head tilts and shifts
- * slightly and returns to rest by the last key.
- */
+/** A brief closed blink preserves the source shy contours during the topology change. */
 const EYE_DELAY = 2 / 60;
 
 const mouth = track('mouth', 'shape', [key(0, 'normal'), key(0.4, 'shy', 'easeInOut')]);
@@ -12,10 +9,7 @@ const morph = (part: string) => track(part, 'shape', [key(EYE_DELAY, 'normal'), 
 
 export default clip('to-shy', { rig: 'pubnyan', duration: 0.4, fps: 60, loop: false }, [
   mouth,
-  morph('eye-l.white'),
-  morph('eye-r.white'),
-  morph('eye-l.pupil'),
-  morph('eye-r.pupil'),
+  ...sourceEyeTransition('normal', 'shy'),
   morph('nose'),
 
   // head accent: tilts and shifts, returning to rest by the last key

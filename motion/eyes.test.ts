@@ -1,21 +1,10 @@
 import { expect, test } from 'vitest';
 import { clips, getRig } from './index.ts';
-import { resolvePath, sampleClip } from '#ir/sample.ts';
-import { interpolatePath } from '#ir/path.ts';
+import { sampleClip } from '#ir/sample.ts';
 import { Renderer } from '#render/renderer.ts';
 import { sampleTimes } from '#verify/parity.ts';
 import svgpath from 'svgpath';
 import { svgPathBbox } from 'svg-path-bbox';
-
-test.each(['curious', 'shy', 'angry'])('%s keeps both pupils visible and morphable from normal', (expression) => {
-  const rig = getRig('pubnyan');
-  for (const side of ['l', 'r']) {
-    const pupil = rig.parts.find((p) => p.name === `eye-${side}.pupil`)!;
-    const path = resolvePath(rig, pupil, expression);
-    expect(path, `${expression}: missing ${pupil.name}`).not.toBeNull();
-    expect(interpolatePath(pupil.path!, path!, 0.5)).not.toBeNull();
-  }
-});
 
 test('pupils stay inside the eyes throughout glances, blinks, and expression morphs', async () => {
   const rig = getRig('pubnyan');

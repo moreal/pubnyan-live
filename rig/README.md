@@ -14,7 +14,7 @@
 | face | white star-shaped muzzle |
 | eye-l.white, eye-r.white | white eye shapes; the expression variants change shape (slits, crescents, closed lines) |
 | tear-l, tear-r | hidden except in `cry` |
-| eye-l.pupil, eye-r.pupil | visible in every open-eye expression; compatible override paths keep gaze continuous during morphs |
+| eye-l.pupil, eye-r.pupil | separate pupils for normal, happy, and cry; curious/angry encode their gaze in the original white contour, and shy has squeezed-shut eyes |
 | nose, mouth | black features on the face |
 | ring-front | front orbital band; child of body, pivot `[220, 270]`. Rendered above the torso and head subtree. |
 | ring-gap-l, ring-gap-r | hidden compatibility joints; the ring openings are now transparent geometry, never animated white masks. |
@@ -27,7 +27,7 @@ Expressions: normal, angry, curious, cry, shy, happy (curved smiling eyes, contr
 
 - **absent** — the part keeps its default path. Torso, orbit, and face are absent from the non-default maps, so every expression wears the same silhouette instead of a near-identical copy with a different vertex count.
 - **selector** — the part takes that path from the expression's own file.
-- **`null`** — the part is hidden in this expression. Do not hide pupils merely to suggest a lowered eyelid; author the visible pupil contour within the eye instead.
+- **`null`** — the part is hidden in this expression. Use this for the separate pupils in curious, angry, and shy: their original white contours already encode the gaze or squeezed-shut lids. Do not add an invented pupil over those source shapes.
 
 Only the mapped parts land in `*.rig.json`; `resolvePath()` falls back to the default for the rest.
 
@@ -48,3 +48,7 @@ Animate **both `ring-back` and `ring-front` with identical position, rotation, a
 The pubnyan artboard is **406 × 351**, with a **16 px gutter on every side** of the original 374 × 319 artwork. A single `translate(16 16)` group in the override SVG shifts all paths, including source-derived expression paths already aligned to the normal nose. Explicit joint pivots shift by the same amount; other pivots are extracted from their paths. This gives head turns and ear follow-through room without clipping or requiring every clip to move the character downward.
 
 Use ring rotations around ±4°, head rotations around ±4°, and ear accents around ±6°; inspect the neck and ear-root joins at the motion extremes. The rest-outline regression test compares the union of the six articulated black pieces against the source silhouette with its two original ring openings, allowing only raster antialiasing differences. Pupil containment samples the complete artboard, so future coordinate changes cannot silently evade the check.
+
+## Source expression fidelity
+
+Curious, angry, and shy eye and mouth overrides are exact source paths, translated to the normal nose and then the shared gutter. They are not simplified to four-cubic ovals for morph compatibility. Their transition clips conceal eye topology changes during a brief closed blink; shy keeps its original squeezed-shut eyes throughout its sustained loop. `motion/source-expressions.test.ts` checks these contours against the vendor SVGs to prevent replacement with invented shapes.
