@@ -3,13 +3,19 @@ import { orbit } from './ring-motion.ts';
 
 /** A shared joke: counter-pose, held wink, and a delayed ear flourish. */
 export default clip('wink', { rig: 'pubnyan', duration: 0.95, fps: 60, loop: false }, [
-  ...['eye-r.white', 'eye-r.pupil'].map((part) => track(part, 'scale', [
-    key(0, [1, 1]), key(0.13, [1, 1]), key(0.21, [1, 0.08], 'easeIn'),
-    key(0.39, [1, 0.08]), key(0.57, [1, 1], 'outCubic'), key(0.95, [1, 1]),
-  ])),
+  // Let the upper lid travel toward the lower lid instead of pinching the eye
+  // at its centre. The pupil keeps its shape and gaze while the aperture closes.
+  track('eye-r.white', 'scale', [
+      key(0, [1, 1]), key(0.13, [1, 1]), key(0.23, [0.92, 0.08], 'inOutCubic'),
+      key(0.35, [0.92, 0.08]), key(0.57, [1, 1], 'inOutSine'), key(0.95, [1, 1]),
+    ]),
+  track('eye-r.white', 'position', [
+      key(0, [0, 0]), key(0.13, [0, 0]), key(0.23, [0, 4], 'inOutCubic'),
+      key(0.35, [0, 4]), key(0.57, [0, 0], 'inOutSine'), key(0.95, [0, 0]),
+    ]),
   track('eye-r.pupil', 'opacity', [
-    key(0, 1), key(0.17, 1), key(0.2, 0, 'easeIn'), key(0.39, 0),
-    key(0.42, 1, 'outCubic'), key(0.95, 1),
+    key(0, 1), key(0.215, 1), key(0.23, 0, 'inOutSine'), key(0.35, 0),
+    key(0.365, 1, 'inOutSine'), key(0.95, 1),
   ]),
   track('head', 'rotation', [
     key(0, 0), key(0.1, 0.9, 'inOutCubic'), key(0.25, -4, 'outCubic'),

@@ -5,6 +5,8 @@ export interface PartsMapPart {
   name: string;
   fill: string;
   parent?: string;
+  /** Earlier sibling whose animated geometry clips this part. */
+  clipTo?: string;
   /** Defaults to the bbox centre of the part's default path. */
   pivot?: Vec2;
 }

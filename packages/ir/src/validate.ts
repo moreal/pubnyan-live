@@ -30,6 +30,14 @@ export function validateRig(rig: Rig): string[] {
     if (part.parent !== undefined && !seen.has(part.parent)) {
       errors.push(`${at}: parent "${part.parent}" must be declared before this part`);
     }
+    if (part.clipTo !== undefined) {
+      const source = rig.parts.find(p => p.name === part.clipTo);
+      if (!source || !seen.has(part.clipTo)) {
+        errors.push(`${at}: clipTo must name a part declared earlier`);
+      } else if (source.parent !== part.parent || source.clipTo !== undefined) {
+        errors.push(`${at}: clipTo must reference an unclipped sibling with the same parent`);
+      }
+    }
     if (part.path !== null && !isPathData(part.path)) errors.push(`${at}: path must be null or absolute M/L/C/Z path data`);
     seen.add(part.name);
   }
@@ -63,6 +71,7 @@ export function isRig(data: unknown): data is Rig {
     if (typeof part.fill !== 'string') return false;
     if (!isVec2(part.pivot)) return false;
     if (part.parent !== undefined && typeof part.parent !== 'string') return false;
+    if (part.clipTo !== undefined && typeof part.clipTo !== 'string') return false;
     if (part.path !== null && typeof part.path !== 'string') return false;
   }
   if (typeof r.expressions !== 'object' || r.expressions === null) return false;

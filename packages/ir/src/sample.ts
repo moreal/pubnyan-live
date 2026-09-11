@@ -3,12 +3,19 @@ import { IDENTITY, localMatrix, multiply } from '#ir/matrix.ts';
 import { interpolatePath } from '#ir/path.ts';
 import type { Clip, Key, Matrix, Property, Rig, RigPart, Track, Vec2 } from '#ir/types.ts';
 
+export interface ClipPath {
+  d: string;
+  matrix: Matrix;
+}
+
 export interface SampledPart {
   name: string;
   fill: string;
   d: string;
   opacity: number;
   matrix: Matrix;
+  /** World-space geometric aperture. Undefined is unclipped; [] is fully clipped. */
+  clipPaths?: ClipPath[];
 }
 
 export const REST = Object.freeze({
@@ -88,6 +95,7 @@ export function sampleClip(rig: Rig, clip: Clip, time: number): SampledPart[] {
   const t = wrapTime(clip, time);
   const byPart = groupTracks(clip);
   const world = new Map<string, Matrix>();
+  const apertures = new Map<string, ClipPath[]>();
   const out: SampledPart[] = [];
   for (const part of rig.parts) {
     const tracks = byPart.get(part.name) ?? {};
@@ -98,10 +106,13 @@ export function sampleClip(rig: Rig, clip: Clip, time: number): SampledPart[] {
     const parent = part.parent ? world.get(part.parent) : undefined;
     const matrix = multiply(parent ?? IDENTITY, localMatrix(part.pivot, position, rotation, sc));
     world.set(part.name, matrix);
-    for (const shape of sampleShape(rig, part, tracks.shape, t)) {
+    const shapes = sampleShape(rig, part, tracks.shape, t);
+    apertures.set(part.name, shapes.filter(s => s.opacity > 0).map(s => ({ d: s.d, matrix })));
+    const clipPaths = part.clipTo === undefined ? undefined : apertures.get(part.clipTo) ?? [];
+    for (const shape of shapes) {
       const o = opacity * shape.opacity;
       if (o <= 0) continue;
-      out.push({ name: part.name, fill: part.fill, d: shape.d, opacity: o, matrix });
+      out.push({ name: part.name, fill: part.fill, d: shape.d, opacity: o, matrix, ...(clipPaths === undefined ? {} : { clipPaths }) });
     }
   }
   return out;
@@ -110,9 +121,12 @@ export function sampleClip(rig: Rig, clip: Clip, time: number): SampledPart[] {
 /** Every visible part of an expression at rest: identity transforms, full opacity. */
 export function staticParts(rig: Rig, expression: string): SampledPart[] {
   const out: SampledPart[] = [];
+  const apertures = new Map<string, ClipPath[]>();
   for (const part of rig.parts) {
     const d = resolvePath(rig, part, expression);
-    if (d) out.push({ name: part.name, fill: part.fill, d, opacity: 1, matrix: IDENTITY });
+    apertures.set(part.name, d ? [{ d, matrix: IDENTITY }] : []);
+    const clipPaths = part.clipTo === undefined ? undefined : apertures.get(part.clipTo) ?? [];
+    if (d) out.push({ name: part.name, fill: part.fill, d, opacity: 1, matrix: IDENTITY, ...(clipPaths === undefined ? {} : { clipPaths }) });
   }
   return out;
 }

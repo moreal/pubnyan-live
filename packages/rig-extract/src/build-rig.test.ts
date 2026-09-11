@@ -88,3 +88,11 @@ describe('buildRig', () => {
     expect(() => buildRig('t', def2, files)).toThrow(/expression "shifted" must map the align part "nose"/);
   });
 });
+
+test('preserves an authored aperture relationship when extracting the rig', () => {
+  const clipped = structuredClone(def);
+  clipped.parts[2]!.clipTo = 'hole';
+  const result = buildRig('t', clipped, files);
+  expect(result.parts[2]!.clipTo).toBe('hole');
+  expect(validateRig(result)).toEqual([]);
+});

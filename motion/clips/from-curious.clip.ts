@@ -12,6 +12,6 @@ export default clip('from-curious', { rig: 'pubnyan', duration: 0.4, fps: 60, lo
   ...sourceEyeTransition('curious', 'normal'),
   morph('nose'),
 
-  // head accent: mirrors to-curious's tilt, back to rest on inOutCubic
-  track('head', 'rotation', [key(0, -3), key(0.4, 0, 'inOutCubic')]),
+  // Start from rest so ending the question does not snap into a new tilt.
+  track('head', 'rotation', [key(0, 0), key(0.15, -1.5, 'inOutCubic'), key(0.4, 0, 'inOutCubic')]),
 ]);

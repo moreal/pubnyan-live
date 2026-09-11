@@ -41,6 +41,7 @@ export default machine({
       ],
     },
     reaction: {
+      // Blend from the current pose, including when a reaction interrupts another.
       // One-shot reactions, each fired by its own trigger input. The Rive exporter
       // releases these overlays to the empty entry after completion, so the
       // expression layer regains control of every facial channel.
@@ -55,12 +56,12 @@ export default machine({
         'ring-wobble': { clip: 'ring-wobble', mode: 'once' },
       },
       transitions: [
-        { from: '*', to: 'wink', when: { input: 'react', fired: true }, duration: 0 },
-        { from: '*', to: 'nod', when: { input: 'reactNod', fired: true }, duration: 0 },
-        { from: '*', to: 'tilt', when: { input: 'reactTilt', fired: true }, duration: 0 },
-        { from: '*', to: 'ear-twitch', when: { input: 'reactEarTwitch', fired: true }, duration: 0 },
-        { from: '*', to: 'ring-wobble', when: { input: 'reactRingWobble', fired: true }, duration: 0 },
-        { from: '*', to: 'tail-flick', when: { input: 'reactTailFlick', fired: true }, duration: 0 },
+        { from: '*', to: 'wink', when: { input: 'react', fired: true }, duration: 0.1 },
+        { from: '*', to: 'nod', when: { input: 'reactNod', fired: true }, duration: 0.1 },
+        { from: '*', to: 'tilt', when: { input: 'reactTilt', fired: true }, duration: 0.1 },
+        { from: '*', to: 'ear-twitch', when: { input: 'reactEarTwitch', fired: true }, duration: 0.1 },
+        { from: '*', to: 'ring-wobble', when: { input: 'reactRingWobble', fired: true }, duration: 0.1 },
+        { from: '*', to: 'tail-flick', when: { input: 'reactTailFlick', fired: true }, duration: 0.1 },
       ],
     },
     celebration: {
@@ -72,7 +73,7 @@ export default machine({
         celebrate: { clip: 'celebrate', mode: 'once' },
       },
       transitions: [
-        { from: '*', to: 'celebrate', when: { input: 'reactCelebrate', fired: true }, duration: 0 },
+        { from: '*', to: 'celebrate', when: { input: 'reactCelebrate', fired: true }, duration: 0.1 },
       ],
     },
   },

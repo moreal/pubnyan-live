@@ -15,19 +15,21 @@ export function breath(duration: number, height = 0.008): Track[] {
 }
 
 /** Fast closure, a readable closed hold, then a softer reopening.
- * White and pupil use the same compression to keep the pupil inside the eye.
+ * Ease out of the closed hold instead of opening a quarter-eye in one frame.
+ * Only the white aperture compresses. The unscaled black pupil merges into
+ * the opaque black head outside it; conceal it only at the closed-lid seam.
  */
 export function blink(duration: number, start: number, side: 'both' | 'right' = 'both'): Track[] {
   const parts = side === 'right' ? ['eye-r.white', 'eye-r.pupil']
     : ['eye-l.white', 'eye-l.pupil', 'eye-r.white', 'eye-r.pupil'];
-  return [...parts.map((part) => track(part, 'scale', [
+  return [...parts.filter(part => part.endsWith('.white')).map((part) => track(part, 'scale', [
     key(0, [1, 1]), key(start, [1, 1]),
     key(start + 0.08, [1, 0.08], 'easeIn'),
     key(start + 0.12, [1, 0.08]),
-    key(start + 0.3, [1, 1], 'outCubic'), key(duration, [1, 1]),
+    key(start + 0.3, [1, 1], 'inOutSine'), key(duration, [1, 1]),
   ])), ...parts.filter((part) => part.endsWith('.pupil')).map((part) => track(part, 'opacity', [
-    key(0, 1), key(start, 1), key(start + 0.04, 1), key(start + 0.07, 0, 'easeIn'),
-    key(start + 0.12, 0), key(start + 0.15, 1, 'outCubic'), key(duration, 1),
+    key(0, 1), key(start, 1), key(start + 0.065, 1), key(start + 0.08, 0, 'inOutSine'),
+    key(start + 0.12, 0), key(start + 0.135, 1, 'inOutSine'), key(duration, 1),
   ]))];
 }
 
@@ -40,14 +42,14 @@ export function sourceEyeTransition(from: string, to: string): Track[] {
       // The source expression has no separate pupil; no empty crossfade layer is needed.
       track(part, 'shape', part.endsWith('.pupil') ? [key(0, 'normal')] : [
         key(0, from), key(0.1, from), key(0.15, to, 'inOutCubic'), key(0.4, to)]),
-      track(part, 'scale', [key(0, [1, 1]), key(1 / 60, [1, 1]),
+      ...(!part.endsWith('.white') ? [] : [track(part, 'scale', [key(0, [1, 1]), key(1 / 60, [1, 1]),
         key(0.1, [1, 0.08], 'easeIn'), key(0.15, [1, 0.08]),
-        key(1 / 3, [1, 1], 'outCubic'), key(0.4, [1, 1])]),
+        key(1 / 3, [1, 1], 'inOutSine'), key(0.4, [1, 1])])]),
     ]),
     ...eyes.filter(part => part.endsWith('.pupil')).map(part => track(part, 'opacity', [
-      key(0, from === 'normal' ? 1 : 0), key(1 / 30, from === 'normal' ? 1 : 0),
-      key(1 / 12, 0, 'easeIn'), key(1 / 6, 0),
-      key(0.2, to === 'normal' ? 1 : 0, 'outCubic'), key(0.4, to === 'normal' ? 1 : 0),
+      key(0, from === 'normal' ? 1 : 0), key(0.085, from === 'normal' ? 1 : 0),
+      key(0.1, 0, 'inOutSine'), key(0.15, 0),
+      key(1 / 6, to === 'normal' ? 1 : 0, 'inOutSine'), key(0.4, to === 'normal' ? 1 : 0),
     ])),
   ];
 }

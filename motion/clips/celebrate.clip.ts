@@ -53,14 +53,14 @@ export default clip('celebrate', { rig: 'pubnyan', duration: 1.5, fps: 60, loop:
     key(0, 'default'), key(0.12, 'default'), key(0.28, 'happy', 'outCubic'),
     key(0.86, 'happy'), key(1.24, 'default', 'inOutSine'), key(1.5, 'default'),
   ]),
-  // Iris and lid share morph timing, so the iris stays inside the rising lid.
+  // Only lids morph. Pupils retain their round shape and hide behind the closed smile.
   // Hold the joyful arch through the landing, then greet the viewer again.
-  ...['eye-l.white', 'eye-l.pupil', 'eye-r.white', 'eye-r.pupil'].map(part => track(part, 'shape', [
-    key(0, 'default'), key(0.16, 'default'), key(0.28, 'happy', 'outCubic'),
+  ...['eye-l.white', 'eye-r.white'].map(part => track(part, 'shape', [
+    key(0, 'default'), key(0.16, 'default'), key(0.28, 'happy', 'inOutCubic'),
     key(0.62, 'happy'), key(0.84, 'default', 'inOutCubic'), key(1.5, 'default'),
   ])),
   ...['eye-l.pupil', 'eye-r.pupil'].map(part => track(part, 'opacity', [
-    key(0, 1), key(0.18, 1), key(0.26, 0, 'outCubic'), key(0.62, 0),
-    key(0.7, 1, 'outCubic'), key(1.5, 1),
+    key(0, 1), key(0.27, 1), key(0.28, 0, 'inOutSine'), key(0.62, 0),
+    key(0.62 + 1 / 60, 1, 'inOutSine'), key(1.5, 1),
   ])),
 ]);

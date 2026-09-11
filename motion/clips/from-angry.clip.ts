@@ -12,6 +12,6 @@ export default clip('from-angry', { rig: 'pubnyan', duration: 0.4, fps: 60, loop
   ...sourceEyeTransition('angry', 'normal'),
   morph('nose'),
 
-  // head accent: mirrors to-angry's dip, back to rest on inOutCubic
-  track('head', 'position', [key(0, [0, -2]), key(0.4, [0, 0], 'inOutCubic')]),
+  // Start from the expression's resting pose; a small dip accompanies release.
+  track('head', 'position', [key(0, [0, 0]), key(0.15, [0, -1], 'inOutCubic'), key(0.4, [0, 0], 'inOutCubic')]),
 ]);

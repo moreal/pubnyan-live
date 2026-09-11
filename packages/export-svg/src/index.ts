@@ -58,16 +58,63 @@ function transformStops(part: RigPart, tracks: TracksByProperty, clip: Clip): St
   return stops;
 }
 
-function shapeMarkup(rig: Rig, part: RigPart, track: Track<'shape'> | undefined, clip: Clip, timing: string, rules: string[]): string {
-  const id = cssName(part.name);
+/** Segment gates preserve per-segment morphing even when another key is null or incompatible. */
+function segmentedShapes(rig: Rig, part: RigPart, tr: Track<'shape'>, clip: Clip, timing: string, rules: string[], clipping: boolean): string {
+  const prefix = `${cssName(part.name)}-${clipping ? 'aperture' : 'segments'}`;
+  const paths: string[] = [];
+  const pct = (t: number) => String(Number((t / clip.duration * 100).toFixed(10)));
+  const gateTiming = `${fmt(clip.duration)}s steps(1, end) ${clip.loop ? 'infinite' : '1 forwards'}`;
+  const emit = (d: string | null, start: number, end: number, morph?: [Key<string>, Key<string>], opacity?: [number, number], ease?: EaseName) => {
+    if (!d || end <= start || start > clip.duration) return;
+    const id = `${prefix}-${paths.length}`;
+    const gates = [`0% { visibility: ${start <= 0 ? 'visible' : 'hidden'}; }`];
+    if (start > 0) gates.push(`${pct(start)}% { visibility: visible; }`);
+    if (end < clip.duration) gates.push(`${pct(end)}% { visibility: hidden; }`);
+    gates.push(`100% { visibility: ${end <= clip.duration ? 'hidden' : 'visible'}; }`);
+    rules.push(`@keyframes ${id}-gate { ${gates.join(' ')} }`);
+    const animations = [`${id}-gate ${gateTiming}`];
+    if (morph) {
+      rules.push(keyframes(`${id}-shape`, keyStops(morph, clip.duration, v => `d: path("${resolvePath(rig, part, v)}")`)));
+      animations.push(`${id}-shape ${timing}`);
+    }
+    if (opacity) {
+      rules.push(keyframes(`${id}-opacity`, keyStops([{t:start,v:opacity[0]}, {t:end,v:opacity[1],ease}], clip.duration, v => `opacity: ${v}`)));
+      animations.push(`${id}-opacity ${timing}`);
+    }
+    paths.push(`<path d="${d}" fill="${part.fill}" style="animation: ${animations.join(', ')}"/>`);
+  };
+  const first = tr.keys[0]!;
+  emit(resolvePath(rig, part, first.v), 0, first.t);
+  for (let i = 0; i + 1 < tr.keys.length; i++) {
+    const from = tr.keys[i]!, to = tr.keys[i + 1]!;
+    const a = resolvePath(rig, part, from.v), b = resolvePath(rig, part, to.v);
+    if (a && b && interpolatePath(a, b, 0) !== null) {
+      emit(a, from.t, to.t, [from, to]);
+    } else {
+      emit(a, from.t, to.t, undefined, clipping ? undefined : [1, 0], to.ease);
+      // Native targets also use a sub-frame activation epsilon at discontinuities.
+      emit(b, from.t + (clipping ? 1e-7 : 0), to.t, undefined, clipping ? undefined : [0, 1], to.ease);
+    }
+  }
+  const last = tr.keys[tr.keys.length - 1]!;
+  emit(resolvePath(rig, part, last.v), last.t, clip.duration + 1);
+  return paths.join('');
+}
+
+function shapeMarkup(rig: Rig, part: RigPart, track: Track<'shape'> | undefined, clip: Clip, timing: string, rules: string[], clipping = false): string {
+  const id = cssName(part.name) + (clipping ? '-clip' : '');
   const path = (d: string, style = '') => `<path d="${d}" fill="${part.fill}"${style ? ` style="${style}"` : ''}/>`;
   if (!track) return part.path ? path(part.path) : '';
   const paths = track.keys.map((k) => resolvePath(rig, part, k.v));
+  if (clipping) return segmentedShapes(rig, part, track, clip, timing, rules, true);
   const morphable = paths.every((d, i) => i === 0 || (d !== null && paths[i - 1] !== null && interpolatePath(paths[i - 1]!, d, 0) !== null));
   if (morphable) {
     if (!paths[0]) return '';
     rules.push(keyframes(`${id}-s`, keyStops(track.keys, clip.duration, (v) => `d: path("${resolvePath(rig, part, v)}")`)));
     return path(paths[0]!, `animation: ${id}-s ${timing}`);
+  }
+  if (paths.some((d, i) => i > 0 && d && paths[i - 1] && d !== paths[i - 1] && interpolatePath(paths[i - 1]!, d, 0) !== null)) {
+    return segmentedShapes(rig, part, track, clip, timing, rules, false);
   }
   const expressions = [...new Set(track.keys.map((k) => k.v))];
   return expressions
@@ -75,7 +122,9 @@ function shapeMarkup(rig: Rig, part: RigPart, track: Track<'shape'> | undefined,
       const d = resolvePath(rig, part, expr);
       if (!d) return '';
       const anim = `${id}-s-${cssName(expr)}`;
-      rules.push(keyframes(anim, keyStops(track.keys, clip.duration, (v) => `opacity: ${v === expr ? 1 : 0}`)));
+      rules.push(keyframes(anim, keyStops(track.keys, clip.duration, (v) => clipping
+        ? `visibility: ${v === expr ? 'visible' : 'hidden'}`
+        : `opacity: ${v === expr ? 1 : 0}`)));
       return path(d, `animation: ${anim} ${timing}`);
     })
     .join('');
@@ -87,6 +136,25 @@ export function exportSvg(rig: Rig, clip: Clip): string {
   for (const part of rig.parts) children.set(part.parent, [...(children.get(part.parent) ?? []), part]);
   const timing = `${fmt(clip.duration)}s linear ${clip.loop ? 'infinite' : '1 forwards'}`;
   const rules: string[] = [];
+  const definitions = new Map<string, string>();
+  const aperture = (name: string): string => {
+    const id = `aperture-${cssName(name)}`;
+    if (definitions.has(name)) return id;
+    const source = rig.parts.find(p => p.name === name)!;
+    const tracks = byPart.get(name) ?? {};
+    const stops = transformStops(source, tracks, clip);
+    const styles = ['transform-box: view-box', 'transform-origin: 0px 0px'];
+    if (stops) {
+      const animation = `${cssName(name)}-clip-t`;
+      rules.push(keyframes(animation, stops));
+      styles.push(`animation: ${animation} ${timing}`);
+    }
+    const paths = shapeMarkup(rig, source, tracks.shape, clip, timing, rules, true);
+    // clipPath uses geometry, not source paint opacity. Visibility selects the
+    // union of active contours during an incompatible source crossfade.
+    definitions.set(name, `<clipPath id="${id}" clipPathUnits="userSpaceOnUse" style="${styles.join('; ')}">${paths}</clipPath>`);
+    return id;
+  };
 
   const render = (part: RigPart): string => {
     const id = cssName(part.name);
@@ -102,11 +170,21 @@ export function exportSvg(rig: Rig, clip: Clip): string {
     // so the opacity animation wraps the part's shapes alone and never the child groups.
     if (tracks.opacity) {
       rules.push(keyframes(`${id}-o`, keyStops(tracks.opacity.keys, clip.duration, (v) => `opacity: ${fmt(v)}`)));
-      shape = `<g style="animation: ${id}-o ${timing}">${shape}</g>`;
+      // Each crossfading contour is a separate sampled drawing. Multiply its
+      // opacity before compositing overlaps, not after flattening the group.
+      shape = shape.replace(/<path\b[^>]*\/>/g, path => `<g style="animation: ${id}-o ${timing}">${path}</g>`);
     }
     const kids = (children.get(part.name) ?? []).map(render).join('');
     const style = ['transform-box: view-box', 'transform-origin: 0px 0px'];
     if (anims.length) style.push(`animation: ${anims.join(', ')}`);
+    if (part.clipTo !== undefined) {
+      // Clip in the common parent's coordinates, before the pupil's own motion.
+      // A separate transformed child group preserves the own-drawing-only rule.
+      const mask = aperture(part.clipTo);
+      const drawing = `<g style="${style.join('; ')}">${shape}</g>`;
+      const descendants = kids ? `<g style="${style.join('; ')}">${kids}</g>` : '';
+      return `<g id="${id}"><g clip-path="url(#${mask})">${drawing}</g>${descendants}</g>`;
+    }
     return `<g id="${id}" style="${style.join('; ')}">${shape}${kids}</g>`;
   };
 
@@ -117,6 +195,7 @@ export function exportSvg(rig: Rig, clip: Clip): string {
     `<title>${clip.name}</title>`,
     `<desc>${ATTRIBUTION}</desc>`,
     `<style>\n${rules.join('\n')}\n</style>`,
+    ...(definitions.size ? [`<defs>${[...definitions.values()].join('')}</defs>`] : []),
     body,
     `</svg>`,
   ].join('\n');

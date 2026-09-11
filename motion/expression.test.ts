@@ -32,13 +32,26 @@ test('blink closes quickly, holds shut, and gives reopening more time', () => {
   const tracks = groupTracks(idle);
   for (const side of ['l', 'r']) {
     const white = tracks.get(`eye-${side}.white`)!.scale!;
-    const pupil = tracks.get(`eye-${side}.pupil`)!.scale!;
-    expect(white.keys).toEqual(pupil.keys);
+    // Closing the aperture must not flatten the pupil beneath it.
+    expect(tracks.get(`eye-${side}.pupil`)!.scale).toBeUndefined();
     const closed = white.keys.filter((key) => key.v[1] === 0.08);
     expect(closed).toHaveLength(2);
     expect(closed[1].t - closed[0].t).toBeGreaterThanOrEqual(0.03);
     const closing = closed[0].t - white.keys[1].t;
     const opening = white.keys[4].t - closed[1].t;
     expect(opening).toBeGreaterThan(closing);
+  }
+});
+
+test('returning from an expression starts from its resting head pose without a jump', async () => {
+  const { sampleClip } = await import('#ir/sample.ts');
+  const { getRig } = await import('./index.ts');
+  const rig = getRig('pubnyan');
+  for (const expression of ['angry', 'curious', 'cry', 'shy']) {
+    const resting = clips.find(c => c.name === `expr-${expression}`)!;
+    const returning = clips.find(c => c.name === `from-${expression}`)!;
+    const faceAtRest = sampleClip(rig, resting, 0).find(p => p.name === 'face')!;
+    const firstFrame = sampleClip(rig, returning, 0).find(p => p.name === 'face')!;
+    expect(firstFrame.matrix, returning.name).toEqual(faceAtRest.matrix);
   }
 });

@@ -73,6 +73,7 @@ export function buildRig(name: string, def: PartsMapRig, files: Record<string, S
     const path = base[p.name] ?? null;
     const part: RigPart = { name: p.name, fill: p.fill, pivot: p.pivot ?? (path ? center(path) : [0, 0]), path };
     if (p.parent !== undefined) part.parent = p.parent;
+    if (p.clipTo !== undefined) part.clipTo = p.clipTo;
     return part;
   });
   return { name, artboard: def.artboard, attribution: ATTRIBUTION, parts, expressions };

@@ -39,16 +39,17 @@ export interface LottieGroupTransform {
   a: { a: 0; k: [number, number] };
   s: { a: 0; k: [number, number] };
   r: { a: 0; k: number };
-  o: { a: 0; k: 100 };
+  o: LottieProperty<number>;
 }
 
 export interface LottieShapeGroup {
   ty: 'gr';
-  it: (LottieShapePath | LottieFill | LottieGroupTransform)[];
+  it: (LottieShapePath | LottieFill | LottieGroupTransform | LottieShapeGroup)[];
   nm: string;
 }
 
 export interface LottieKeyframe {
+  h?: 1;
   t: number;
   s: number[];
   e?: number[];
@@ -80,6 +81,8 @@ export interface LottieLayer {
   ddd: 0;
   ind: number;
   ty: 4;
+  tt?: 1;
+  td?: 1;
   nm: string;
   parent?: number;
   sr: 1;
@@ -225,7 +228,7 @@ function bakedCrossfadeProp(shapeTrack: Track<'shape'>, opacityTrack: Track<'opa
   for (let f = 0; f <= frames; f++) {
     const t = (f / frames) * duration;
     const w = crossfadeWeight(shapeTrack, expression, t) * sampleNumeric(opacityTrack, t);
-    k.push({ t: f, s: [w * 100] });
+    k.push({ t: f, s: [w * 100], o: { x: [0], y: [0] }, i: { x: [1], y: [1] } });
   }
   return { a: 1, k };
 }
@@ -366,6 +369,57 @@ function partLayers(
     const shapes = d0 ? [shapeGroup(part, morphableShapeItems(rig, part, shapeTrack, fps))] : [];
     return [partLayer(part, primaryInd, parentInd, ip, op, tracks, fps, shapes, opacityProp(tracks, fps))];
   }
+  // A later null/incompatible key must not turn an earlier compatible morph into a crossfade.
+  if (shapeTrack.keys.some((from, i) => {
+    const to = shapeTrack.keys[i + 1];
+    return to && from.v !== to.v && isMorphable(rig, part, { ...shapeTrack, keys: [from, to] });
+  })) {
+    const groups: LottieShapeGroup[] = [];
+    const addRange = (items: LottieShapeGroup[], start: number, end: number) => {
+      if (end <= start) return;
+      // Part opacity belongs to each sampled contour, before their crossfade composite.
+      const drawings = items.map((item) => {
+        const drawing = shapeGroup(part, []);
+        const opacity = drawing.it.find((it) => it.ty === 'tr')!;
+        opacity.o = opacityProp(tracks, fps);
+        drawing.it = [item, opacity];
+        return drawing;
+      });
+      const wrapper = shapeGroup(part, []);
+      const transform = wrapper.it.find((it) => it.ty === 'tr')!;
+      transform.o = { a: 1, k: [
+        ...(start > 0 ? [{ t: 0, s: [0], h: 1 as const }] : []),
+        { t: start * fps, s: [100], h: 1 },
+        { t: end * fps, s: [0], h: 1 },
+      ] };
+      wrapper.it = [...drawings, transform];
+      groups.push(wrapper);
+    };
+    const staticGroup = (expression: string) => {
+      const d = resolvePath(rig, part, expression);
+      return d ? [shapeGroup(part, pathToShapes(d, part.name))] : [];
+    };
+    const first = shapeTrack.keys[0]!;
+    addRange(staticGroup(first.v), 0, first.t);
+    for (let i = 0; i < shapeTrack.keys.length - 1; i++) {
+      const from = shapeTrack.keys[i]!;
+      const to = shapeTrack.keys[i + 1]!;
+      const pair = { ...shapeTrack, keys: [from, to] };
+      if (isMorphable(rig, part, pair)) {
+        addRange([shapeGroup(part, morphableShapeItems(rig, part, pair, fps))], from.t, to.t);
+      } else {
+        const items = [...new Set([from.v, to.v])].flatMap((expression) => {
+          const groups = staticGroup(expression);
+          for (const group of groups) group.it.find((it) => it.ty === 'tr')!.o = crossfadeProp(pair, expression, fps);
+          return groups;
+        });
+        addRange(items, from.t, to.t);
+      }
+    }
+    const last = shapeTrack.keys[shapeTrack.keys.length - 1]!;
+    addRange(staticGroup(last.v), last.t, duration + 1);
+    return [partLayer(part, primaryInd, parentInd, ip, op, tracks, fps, groups, { a: 0, k: 100 })];
+  }
   const expressions = [...new Set(shapeTrack.keys.map((k) => k.v))];
   const layers: LottieLayer[] = [];
   for (const [i, expr] of expressions.entries()) {
@@ -380,6 +434,46 @@ function partLayers(
   return layers;
 }
 
+/** A geometric aperture is opaque even when its visible source is fading or transparent.
+ * Separate interval groups preserve compound-path winding and exact morph easing. */
+function apertureGroups(rig: Rig, source: RigPart, track: Track<'shape'> | undefined, fps: number, duration: number): LottieShapeGroup[] {
+  const white = { ...source, fill: '#ffffff' };
+  if (!track) return source.path ? [shapeGroup(white, pathToShapes(source.path, source.name))] : [];
+  const groups: LottieShapeGroup[] = [];
+  const add = (items: LottieShapePath[], start: number, end: number) => {
+    const group = shapeGroup(white, items);
+    const transform = group.it.find((it) => it.ty === 'tr')!;
+    const keys: LottieKeyframe[] = [];
+    if (start > 0) keys.push({ t: 0, s: [0], h: 1 });
+    keys.push({ t: Math.max(0, start) * fps, s: [100], h: 1 });
+    keys.push({ t: end * fps, s: [0], h: 1 });
+    transform.o = { a: 1, k: keys };
+    groups.push(group);
+  };
+  const staticRange = (expression: string, start: number, end: number) => {
+    const d = resolvePath(rig, source, expression);
+    if (d && end > start) add(pathToShapes(d, source.name), start, end);
+  };
+  const first = track.keys[0]!;
+  staticRange(first.v, 0, first.t);
+  for (let i = 0; i < track.keys.length - 1; i++) {
+    const from = track.keys[i]!;
+    const to = track.keys[i + 1]!;
+    const pair = { ...track, keys: [from, to] };
+    if (isMorphable(rig, source, pair)) {
+      add(morphableShapeItems(rig, source, pair, fps), from.t, to.t);
+    } else {
+      staticRange(from.v, from.t, to.t);
+      // At the exact key only the current expression participates. Immediately after it,
+      // both crossfade contours clip at full coverage, independent of crossfade weights.
+      staticRange(to.v, from.t + 1e-7, to.t);
+    }
+  }
+  const last = track.keys[track.keys.length - 1]!;
+  staticRange(last.v, last.t, Math.max(duration, last.t) + 1);
+  return groups;
+}
+
 export function exportLottie(rig: Rig, clip: Clip): LottieJson {
   const ip = 0;
   const op = Math.max(1, Math.round(clip.duration * clip.fps));
@@ -392,8 +486,8 @@ export function exportLottie(rig: Rig, clip: Clip): LottieJson {
   // Lottie's layers array is front-to-back: the rig's bottom-first draw order must be reversed.
   const layers = [...rig.parts]
     .reverse()
-    .flatMap((part) =>
-      partLayers(
+    .flatMap((part) => {
+      const drawing = partLayers(
         rig,
         part,
         indexByName.get(part.name)!,
@@ -404,8 +498,20 @@ export function exportLottie(rig: Rig, clip: Clip): LottieJson {
         clip.fps,
         clip.duration,
         nextIndex,
-      ),
-    );
+      );
+      if (!part.clipTo) return drawing;
+      const source = rig.parts.find((candidate) => candidate.name === part.clipTo)!;
+      const sourceTracks = byPart.get(source.name) ?? {};
+      return drawing.flatMap((layer) => {
+        const matte = partLayer(source, nextIndex(), source.parent ? indexByName.get(source.parent) : undefined,
+          ip, op, sourceTracks, clip.fps,
+          apertureGroups(rig, source, sourceTracks.shape, clip.fps, clip.duration), { a: 0, k: 100 });
+        matte.nm = `${part.name}-aperture`;
+        matte.td = 1;
+        layer.tt = 1;
+        return [matte, layer];
+      });
+    });
   return {
     v: '5.13.0',
     fr: clip.fps,

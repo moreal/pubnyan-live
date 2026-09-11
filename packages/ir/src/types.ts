@@ -9,6 +9,10 @@ export interface RigPart {
   pivot: Vec2;
   /** Transforms of the parent apply to this part. Parent must be declared earlier in `parts`. */
   parent?: string;
+  /** Clip this drawing (not children) to an earlier, unclipped sibling's geometry.
+   * Source color/opacity do not affect the aperture; a null source path clips everything.
+   */
+  clipTo?: string;
   /** Default absolute path data (M/L/C/Z). null = hidden unless an expression supplies a path. */
   path: string | null;
 }

@@ -94,12 +94,14 @@
         {
           "name": "eye-l.pupil",
           "fill": "#000000",
-          "parent": "head"
+          "parent": "head",
+          "clipTo": "eye-l.white"
         },
         {
           "name": "eye-r.pupil",
           "fill": "#000000",
-          "parent": "head"
+          "parent": "head",
+          "clipTo": "eye-r.white"
         },
         {
           "name": "nose",

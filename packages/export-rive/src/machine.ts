@@ -24,7 +24,7 @@ import { interpolatePath } from '#ir/path.ts';
 import { key, track } from '#ir/clip.ts';
 import { groupTracks, resolvePath, sampleShape, sampleNumeric, type TracksByProperty } from '#ir/sample.ts';
 import type { Clip, EaseName, Machine, MachineTransition, Rig, RigPart, Vec2 } from '#ir/types.ts';
-import { splitSubpaths, subpathToVertices, type VertexData } from '#export-rive/index.ts';
+import { maskNeedsReversal, reverseContours, splitSubpaths, subpathToVertices, type VertexData } from '#export-rive/geometry.ts';
 import { KEYS } from '#export-rive/keys.generated.ts';
 import { RivWriter } from '#export-rive/writer.ts';
 
@@ -89,6 +89,11 @@ const CUBIC_Y1 = KEYS.CubicInterpolator!.properties.y1!.key;
 const CUBIC_X2 = KEYS.CubicInterpolator!.properties.x2!.key;
 const CUBIC_Y2 = KEYS.CubicInterpolator!.properties.y2!.key;
 const INTERPOLATION_TYPE_CUBIC = 1;
+// A native scale constraint saturates the blended activation signal, preserving
+// full contours throughout incompatible state crossfades (opacity cannot gate clips).
+// The saturation threshold is a blend weight of 1e-12, far below one animation
+// tick; the squared gain also stays within the native float matrix's finite range.
+const MASK_ACTIVATION_GAIN = 1e12;
 
 // `StateMachineComponent.name` (layers and inputs are both named this way).
 const SM_NAME = KEYS.StateMachineComponent!.properties.name!.key;
@@ -173,7 +178,16 @@ export function exportRiveMachine(rig: Rig, clips: Clip[], machine: Machine): Bu
       for (const name of owned) partialClipNames.add(name);
     }
   }
+  const clipSources = new Set(rig.parts.flatMap((part) => part.clipTo ? [part.clipTo] : []));
+  const maskNodeByPart = new Map<string, number>();
+  for (const name of clipSources) {
+    maskNodeByPart.set(name, add(NODE, [[PARENT_ID, 0], [NAME, `${name}-clip`]]));
+  }
+  const maskTransformCopies = new Map<string, number[]>();
   interface Geometry {
+    mask: boolean;
+    gateIndex?: number;
+    reverseMask: boolean;
     path: string;
     shapeIndex: number;
     vertices: number[][];
@@ -195,26 +209,84 @@ export function exportRiveMachine(rig: Rig, clips: Clip[], machine: Machine): Bu
       if (!representatives.some((other) => interpolatePath(other, path, 0) !== null)) representatives.push(path);
     }
     const geometries: Geometry[] = [];
-    for (const [g, path] of representatives.entries()) {
-      const shapeIndex = add(SHAPE, [
-        [PARENT_ID, nodeIndexByPart.get(part.name)!],
-        [NODE_OPACITY, part.path && interpolatePath(path, part.path, 0) !== null ? 1 : 0],
-      ]);
-      const vertices: number[][] = [];
-      const rest = splitSubpaths(path).map((sub) => subpathToVertices(sub, part.pivot));
-      for (const [s, values] of rest.entries()) {
-        const pathIndex = add(POINTS_PATH, [[PARENT_ID, shapeIndex], [NAME, `${part.name}-${g}-${s}`], [IS_CLOSED, 1]]);
-        vertices.push(values.map((v) => add(CUBIC_DETACHED_VERTEX, [
-          [PARENT_ID, pathIndex], [VERTEX_X, v.x], [VERTEX_Y, v.y],
-          [IN_ROTATION, v.inRotation], [IN_DISTANCE, v.inDistance],
-          [OUT_ROTATION, v.outRotation], [OUT_DISTANCE, v.outDistance],
-        ])));
+    if (clipSources.has(part.name) && representatives.length === 0) representatives.push('M0 0L0 0Z');
+    for (const mask of clipSources.has(part.name) ? [false, true] : [false]) {
+      for (const [g, path] of representatives.entries()) {
+        const activeAtRest = part.path && interpolatePath(path, part.path, 0) !== null;
+        let shapeParent = nodeIndexByPart.get(part.name)!;
+        let gateIndex: number | undefined;
+        if (mask) {
+          // Gate in identity space BEFORE replaying the source ancestor transforms.
+          // Clamping below the source would require inverting its world matrix,
+          // which is singular for a fully closed eye (scaleY = 0).
+          gateIndex = add(NODE, [
+            [PARENT_ID, maskNodeByPart.get(part.name)!],
+            [NODE_SCALE_X, activeAtRest ? MASK_ACTIVATION_GAIN : 0],
+            [NODE_SCALE_Y, activeAtRest ? MASK_ACTIVATION_GAIN : 0],
+          ]);
+          add(KEYS.ScaleConstraint!.typeKey, [
+            [PARENT_ID, gateIndex],
+            [KEYS.TargetedConstraint!.properties.targetId!.key, 0xffffffff],
+            [KEYS.TransformComponentConstraint!.properties.minMaxSpaceValue!.key, 1],
+            [KEYS.TransformComponentConstraint!.properties.max!.key, 1],
+            [KEYS.TransformComponentConstraint!.properties.maxValue!.key, 1],
+            [KEYS.TransformComponentConstraintY!.properties.maxY!.key, 1],
+            [KEYS.TransformComponentConstraintY!.properties.maxValueY!.key, 1],
+          ]);
+          const ancestors: RigPart[] = [];
+          for (let source: RigPart | undefined = part; source; source = source.parent ? partByName.get(source.parent) : undefined) {
+            ancestors.unshift(source);
+          }
+          shapeParent = gateIndex;
+          for (const source of ancestors) {
+            const parentPivot = source.parent ? partByName.get(source.parent)!.pivot : [0, 0];
+            shapeParent = add(NODE, [
+              [PARENT_ID, shapeParent],
+              [NODE_X, source.pivot[0] - parentPivot[0]!],
+              [NODE_Y, source.pivot[1] - parentPivot[1]!],
+            ]);
+            const copies = maskTransformCopies.get(source.name) ?? [];
+            copies.push(shapeParent);
+            maskTransformCopies.set(source.name, copies);
+          }
+        }
+        const shapeIndex = add(SHAPE, [
+          [PARENT_ID, shapeParent], [NODE_OPACITY, activeAtRest ? 1 : 0],
+        ]);
+        const vertices: number[][] = [];
+        const original = splitSubpaths(path).map((sub) => subpathToVertices(sub, part.pivot));
+        const reverseMask = mask && maskNeedsReversal(original);
+        const rest = reverseMask ? reverseContours(original) : original;
+        for (const [s, values] of rest.entries()) {
+          const pathIndex = add(POINTS_PATH, [[PARENT_ID, shapeIndex], [NAME, `${part.name}-${g}-${s}`], [IS_CLOSED, 1]]);
+          vertices.push(values.map((v) => add(CUBIC_DETACHED_VERTEX, [
+            [PARENT_ID, pathIndex], [VERTEX_X, v.x], [VERTEX_Y, v.y],
+            [IN_ROTATION, v.inRotation], [IN_DISTANCE, v.inDistance],
+            [OUT_ROTATION, v.outRotation], [OUT_DISTANCE, v.outDistance],
+          ])));
+        }
+        if (!mask) {
+          const fill = add(FILL, [[PARENT_ID, shapeIndex]]);
+          add(SOLID_COLOR, [[PARENT_ID, fill], [COLOR_VALUE, part.fill]]);
+        }
+        geometries.push({path, shapeIndex, vertices, rest, mask, reverseMask, ...(gateIndex === undefined ? {} : {gateIndex})});
       }
-      const fill = add(FILL, [[PARENT_ID, shapeIndex]]);
-      add(SOLID_COLOR, [[PARENT_ID, fill], [COLOR_VALUE, part.fill]]);
-      geometries.push({path, shapeIndex, vertices, rest});
     }
     geometryByPart.set(part.name, geometries);
+  }
+
+  // Source subtrees contain only dedicated, fill-less mask Shapes. Attaching the
+  // ClippingShape to the drawing Shape keeps a clipped part's children independent.
+  for (const part of rig.parts) {
+    if (!part.clipTo) continue;
+    for (const geometry of geometryByPart.get(part.name) ?? []) {
+      if (!geometry.mask) add(KEYS.ClippingShape!.typeKey, [
+        [PARENT_ID, geometry.shapeIndex],
+        [KEYS.ClippingShape!.properties.sourceId!.key, maskNodeByPart.get(part.clipTo)!],
+        [KEYS.ClippingShape!.properties.fillRule!.key, 0],
+        [KEYS.ClippingShape!.properties.isVisible!.key, 1],
+      ]);
+    }
   }
 
   const animationIdByClip = new Map<string, number>();
@@ -274,22 +346,24 @@ export function exportRiveMachine(rig: Rig, clips: Clip[], machine: Machine): Bu
       const parentPart: RigPart | undefined = part.parent ? partByName.get(part.parent) : undefined;
       const parentPivot: Vec2 = parentPart ? parentPart.pivot : [0, 0];
       if (tracks.position || tracks.rotation || tracks.scale) {
-        w.object(KEYED_OBJECT, [[KEYED_OBJECT_ID, nodeIndex]]);
-        if (tracks.position) {
-          const dx = part.pivot[0] - parentPivot[0];
-          const dy = part.pivot[1] - parentPivot[1];
-          writeDoubleTrack(NODE_X, tracks.position.keys.map((k) => ({ frame: toFrame(k.t), value: dx + k.v[0], ease: k.ease })));
-          writeDoubleTrack(NODE_Y, tracks.position.keys.map((k) => ({ frame: toFrame(k.t), value: dy + k.v[1], ease: k.ease })));
-        }
-        if (tracks.rotation) {
-          writeDoubleTrack(
-            NODE_ROTATION,
-            tracks.rotation.keys.map((k) => ({ frame: toFrame(k.t), value: (k.v * Math.PI) / 180, ease: k.ease })),
-          );
-        }
-        if (tracks.scale) {
-          writeDoubleTrack(NODE_SCALE_X, tracks.scale.keys.map((k) => ({ frame: toFrame(k.t), value: k.v[0], ease: k.ease })));
-          writeDoubleTrack(NODE_SCALE_Y, tracks.scale.keys.map((k) => ({ frame: toFrame(k.t), value: k.v[1], ease: k.ease })));
+        for (const transformIndex of [nodeIndex, ...(maskTransformCopies.get(part.name) ?? [])]) {
+          w.object(KEYED_OBJECT, [[KEYED_OBJECT_ID, transformIndex]]);
+          if (tracks.position) {
+            const dx = part.pivot[0] - parentPivot[0];
+            const dy = part.pivot[1] - parentPivot[1];
+            writeDoubleTrack(NODE_X, tracks.position.keys.map((k) => ({ frame: toFrame(k.t), value: dx + k.v[0], ease: k.ease })));
+            writeDoubleTrack(NODE_Y, tracks.position.keys.map((k) => ({ frame: toFrame(k.t), value: dy + k.v[1], ease: k.ease })));
+          }
+          if (tracks.rotation) {
+            writeDoubleTrack(
+              NODE_ROTATION,
+              tracks.rotation.keys.map((k) => ({ frame: toFrame(k.t), value: (k.v * Math.PI) / 180, ease: k.ease })),
+            );
+          }
+          if (tracks.scale) {
+            writeDoubleTrack(NODE_SCALE_X, tracks.scale.keys.map((k) => ({ frame: toFrame(k.t), value: k.v[0], ease: k.ease })));
+            writeDoubleTrack(NODE_SCALE_Y, tracks.scale.keys.map((k) => ({ frame: toFrame(k.t), value: k.v[1], ease: k.ease })));
+          }
         }
       }
       if (!partialClipNames.has(clipName) || tracks.shape || tracks.opacity) {
@@ -297,28 +371,44 @@ export function exportRiveMachine(rig: Rig, clips: Clip[], machine: Machine): Bu
         // Bake Cartesian path interpolation before converting handles to Rive's
         // polar representation. Four samples per output frame also cover rapid blinks.
         const times = changing
-          ? [...new Set([0, clip.duration, ...tracks.shape!.keys.map((k) => k.t),
+          ? [...new Set([0, clip.duration, ...tracks.shape!.keys.flatMap((k) => [k.t,
+              Math.max(0,k.t-1/animFps),Math.min(clip.duration,k.t+1/animFps)]),
               ...Array.from({length: Math.ceil(clip.duration * clip.fps * 4) + 1},
                 (_, f) => Math.min(clip.duration, f / (clip.fps * 4)))])].sort((a,b) => a-b)
           : [0];
         const shapes = times.map((t) => sampleShape(rig, part, tracks.shape, t));
         for (const geometry of geometryByPart.get(part.name) ?? []) {
           const samples = shapes.map((entries) => entries.find((entry) => interpolatePath(geometry.path, entry.d, 0) !== null));
-          w.object(KEYED_OBJECT, [[KEYED_OBJECT_ID, geometry.shapeIndex]]);
-          const opacity = tracks.opacity;
-          if (!changing) {
-            const weight = samples[0]?.opacity ?? 0;
-            writeDoubleTrack(NODE_OPACITY, (opacity?.keys ?? [key(0, 1)]).map((k) => ({
-              frame: toFrame(k.t), value: weight * k.v, ease: k.ease,
-            })));
+          if (geometry.mask && partialClipNames.has(clipName) && !tracks.shape) continue;
+          if (geometry.mask) {
+            w.object(KEYED_OBJECT, [[KEYED_OBJECT_ID, geometry.gateIndex!]]);
+            const activation = times.map((t, i) => ({frame:toFrame(t),
+              value:samples[i] && samples[i]!.opacity > 0 ? MASK_ACTIVATION_GAIN : 0}));
+            writeDoubleTrack(NODE_SCALE_X, activation);
+            writeDoubleTrack(NODE_SCALE_Y, activation);
           } else {
-            writeDoubleTrack(NODE_OPACITY, times.map((t,i) => ({
-              frame: toFrame(t), value: (samples[i]?.opacity ?? 0) * (opacity ? sampleNumeric(opacity, t) : 1),
-            })));
+            w.object(KEYED_OBJECT, [[KEYED_OBJECT_ID, geometry.shapeIndex]]);
+            const opacity = tracks.opacity;
+            if (!changing) {
+              const weight = samples[0]?.opacity ?? 0;
+              writeDoubleTrack(NODE_OPACITY, (opacity?.keys ?? [key(0, 1)]).map((k) => ({
+                frame: toFrame(k.t), value: weight * k.v, ease: k.ease,
+              })));
+            } else {
+              writeDoubleTrack(NODE_OPACITY, times.map((t,i) => ({
+                frame: toFrame(t), value: (samples[i]?.opacity ?? 0) * (opacity ? sampleNumeric(opacity, t) : 1),
+              })));
+            }
           }
-          const perTime = samples.map((sample) => sample
-            ? splitSubpaths(sample.d).map((sub) => subpathToVertices(sub, part.pivot))
-            : geometry.rest);
+          // Keep full geometry even when inactive. The clamped activation scale
+          // removes inactive masks without blending their vertices toward a point.
+          const perTime = samples.map((sample) => {
+            if (!sample) return geometry.rest;
+            const vertices = splitSubpaths(sample.d).map((sub) => subpathToVertices(sub, part.pivot));
+            // Keep the representative's direction throughout a morph so vertex
+            // identities and their incoming/outgoing handles remain consistent.
+            return geometry.reverseMask ? reverseContours(vertices) : vertices;
+          });
           const properties: [number, keyof VertexData][] = [
             [VERTEX_X, 'x'], [VERTEX_Y, 'y'], [IN_ROTATION, 'inRotation'],
             [IN_DISTANCE, 'inDistance'], [OUT_ROTATION, 'outRotation'], [OUT_DISTANCE, 'outDistance'],

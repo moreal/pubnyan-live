@@ -45,3 +45,19 @@ test('celebration releases its full-face performance back to the continuing emot
     expect(compareFrames(actual[2]!, baseline[1]!).ratio).toBeLessThanOrEqual(0.0005);
   } finally { await renderer.close(); }
 });
+
+test('triggering or interrupting a reaction preserves the pose at the transition boundary', async () => {
+  const rig = getRig('pubnyan');
+  const bytes = exportRiveMachine(rig, clips, machine);
+  const renderer = await Renderer.launch();
+  try {
+    for (const trigger of ['react', 'reactNod', 'reactTilt', 'reactEarTwitch', 'reactTailFlick', 'reactRingWobble', 'reactCelebrate']) {
+      const frames = await renderRiveStateSequence(renderer, rig, bytes, [
+        { seconds: 2 }, { trigger, seconds: 0 },
+        { seconds: 0.3 }, { trigger: trigger === 'reactNod' ? 'reactTilt' : 'reactNod', seconds: 0 },
+      ]);
+      expect(compareFrames(frames[0]!, frames[1]!).ratio, `${trigger} entry snaps`).toBeLessThanOrEqual(0.00001);
+      expect(compareFrames(frames[2]!, frames[3]!).ratio, `${trigger} interruption snaps`).toBeLessThanOrEqual(0.00001);
+    }
+  } finally { await renderer.close(); }
+});

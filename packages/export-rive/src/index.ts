@@ -12,11 +12,14 @@
  * crossfade between one static Shape per distinct expression via keyed opacity on each.
  */
 import { EASES } from '#ir/easing.ts';
-import { interpolatePath, parsePath, type Segment } from '#ir/path.ts';
+import { interpolatePath } from '#ir/path.ts';
 import { groupTracks, locate, resolvePath, sampleNumeric, type TracksByProperty } from '#ir/sample.ts';
 import type { Clip, EaseName, Rig, RigPart, Track, Vec2 } from '#ir/types.ts';
 import { KEYS } from '#export-rive/keys.generated.ts';
 import { RivWriter } from '#export-rive/writer.ts';
+import { splitSubpaths, subpathToVertices, type VertexData } from '#export-rive/geometry.ts';
+export { splitSubpaths, subpathToVertices, type VertexData } from '#export-rive/geometry.ts';
+import { exportRiveMachine } from '#export-rive/machine.ts';
 
 const { typeKey: BACKBOARD } = KEYS.Backboard!;
 const { typeKey: ARTBOARD } = KEYS.Artboard!;
@@ -127,82 +130,6 @@ export function exportRiveSpike(spike: RiveSpike): Buffer {
   return w.toBytes();
 }
 
-const EPSILON = 0.01;
-const close = (a: Vec2, b: Vec2) => Math.abs(a[0] - b[0]) < EPSILON && Math.abs(a[1] - b[1]) < EPSILON;
-
-export interface VertexData {
-  x: number;
-  y: number;
-  inRotation: number;
-  inDistance: number;
-  outRotation: number;
-  outDistance: number;
-}
-
-/**
- * One closed subpath (M, C*, [Z], back to the start) -> vertices with absolute in/out control
- * points converted to CubicDetachedVertex's polar form: `point + distance * (cos r, sin r)`.
- * Coordinates are relative to `pivot` (the Node the Path's Shape is parented to sits there).
- */
-export function subpathToVertices(segs: Segment[], pivot: Vec2): VertexData[] {
-  const points: Vec2[] = [];
-  const outCtrl: (Vec2 | null)[] = [];
-  const inCtrl: (Vec2 | null)[] = [];
-  for (const seg of segs) {
-    if (seg[0] === 'M') {
-      points.push([seg[1], seg[2]]);
-      outCtrl.push(null);
-      inCtrl.push(null);
-    } else if (seg[0] === 'L') {
-      points.push([seg[1], seg[2]]);
-      outCtrl.push(null);
-      inCtrl.push(null);
-    } else if (seg[0] === 'C') {
-      const c1: Vec2 = [seg[1], seg[2]];
-      const c2: Vec2 = [seg[3], seg[4]];
-      const end: Vec2 = [seg[5], seg[6]];
-      outCtrl[outCtrl.length - 1] = c1;
-      if (points.length > 1 && close(end, points[0]!)) {
-        // Closes exactly back to the first vertex: the second control point belongs to that
-        // vertex's incoming handle rather than starting a new (duplicate) vertex.
-        inCtrl[0] = c2;
-      } else {
-        points.push(end);
-        inCtrl.push(c2);
-        outCtrl.push(null);
-      }
-    }
-  }
-  return points.map((p, i) => {
-    const [px, py] = [p[0] - pivot[0], p[1] - pivot[1]];
-    const out = outCtrl[i];
-    const inp = inCtrl[i];
-    const outVec: Vec2 = out ? [out[0] - p[0], out[1] - p[1]] : [0, 0];
-    const inVec: Vec2 = inp ? [inp[0] - p[0], inp[1] - p[1]] : [0, 0];
-    return {
-      x: px,
-      y: py,
-      outDistance: Math.hypot(outVec[0], outVec[1]),
-      outRotation: Math.atan2(outVec[1], outVec[0]),
-      inDistance: Math.hypot(inVec[0], inVec[1]),
-      inRotation: Math.atan2(inVec[1], inVec[0]),
-    };
-  });
-}
-
-/** Splits absolute M/L/C/Z path data on each `M` into its subpaths (a fill can have several).
- * Exported for `#export-rive/machine.ts`, which builds the state machine artboard's rest-pose
- * geometry the same way this file does, without a per-clip shape track to morph/crossfade. */
-export function splitSubpaths(d: string): Segment[][] {
-  const segs = parsePath(d);
-  const subpaths: Segment[][] = [];
-  for (const seg of segs) {
-    if (seg[0] === 'M') subpaths.push([seg]);
-    else subpaths[subpaths.length - 1]!.push(seg);
-  }
-  return subpaths;
-}
-
 interface FrameValue {
   frame: number;
   value: number;
@@ -221,6 +148,11 @@ interface FrameValue {
  * expression is baked into the rest `Shape`, as before.
  */
 export function exportRive(rig: Rig, clip: Clip): Buffer {
+  // Clipped files share the machine writer's dedicated mask geometry and sampled
+  // Cartesian morphs. An empty graph leaves the clip available as a linear animation.
+  if (rig.parts.some((part) => part.clipTo)) {
+    return exportRiveMachine(rig, [clip], { rig: rig.name, inputs: {}, layers: {} });
+  }
   const w = new RivWriter();
   const byPart = groupTracks(clip);
   w.object(BACKBOARD, []);

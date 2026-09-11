@@ -12,7 +12,7 @@ export default clip('from-shy', { rig: 'pubnyan', duration: 0.4, fps: 60, loop: 
   ...sourceEyeTransition('shy', 'normal'),
   morph('nose'),
 
-  // head accent: mirrors to-shy's tilt and shift, back to rest on inOutCubic
-  track('head', 'rotation', [key(0, -2), key(0.4, 0, 'inOutCubic')]),
-  track('head', 'position', [key(0, [-2, 1]), key(0.4, [0, 0], 'inOutCubic')]),
+  // Ease into a small release accent from the expression's resting pose.
+  track('head', 'rotation', [key(0, 0), key(0.15, -1, 'inOutCubic'), key(0.4, 0, 'inOutCubic')]),
+  track('head', 'position', [key(0, [0, 0]), key(0.15, [-1, 0.5], 'inOutCubic'), key(0.4, [0, 0], 'inOutCubic')]),
 ]);
