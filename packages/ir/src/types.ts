@@ -89,6 +89,10 @@ export interface MachineTransition {
 }
 
 export interface MachineLayer {
+  /** Optional Rive bridge clips by source/destination state. A bridge runs once
+   * before entering the destination. Inputs changed during a bridge are picked
+   * up at its end. Single-animation targets retain their ordinary transitions. */
+  bridges?: Record<string, Record<string, Clip>>;
   entry: string;
   states: Record<string, MachineState>;
   transitions: MachineTransition[];

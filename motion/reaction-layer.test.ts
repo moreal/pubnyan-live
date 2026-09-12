@@ -61,3 +61,39 @@ test('triggering or interrupting a reaction preserves the pose at the transition
     }
   } finally { await renderer.close(); }
 });
+
+// A shape-less reaction must never resurrect a pupil that an expression hides.
+test('reactions preserve absent expression pupils and crying pupil geometry', async () => {
+  const { PNG } = await import('pngjs');
+  const rig = structuredClone(getRig('pubnyan'));
+  for (const part of rig.parts) if (part.name.endsWith('.pupil')) part.fill = '#ff0000';
+  const bytes = exportRiveMachine(rig, clips, machine);
+  const renderer = await Renderer.launch();
+  try {
+    for (const expression of [1, 2, 4]) {
+      for (const trigger of ['react', 'reactNod', 'reactTilt', 'reactEarTwitch', 'reactTailFlick', 'reactRingWobble']) {
+        const frames = await renderRiveStateSequence(renderer, rig, bytes, [
+          { expression, seconds: 1 }, { trigger, seconds: 0.1 }, { seconds: 0.4 }, { seconds: 0.1 },
+        ]);
+        for (const frame of frames) {
+          const { data } = PNG.sync.read(frame);
+          let red = 0;
+          for (let i = 0; i < data.length; i += 4) if (data[i]! > 150 && data[i + 1]! < 80 && data[i + 2]! < 80) red++;
+          expect(red, `${expression}/${trigger}: invented pupil`).toBe(0);
+        }
+      }
+    }
+    // At these fully reopened poses, omitting opacity only must not change the face.
+    const control = structuredClone(clips);
+    for (const c of control) if (['wink','nod','ring-wobble','tail-flick'].includes(c.name)) {
+      c.tracks = c.tracks.filter(t => !(t.part.endsWith('.pupil') && t.property === 'opacity'));
+    }
+    const controlBytes = exportRiveMachine(rig, control, machine);
+    for (const trigger of ['react', 'reactNod', 'reactTailFlick', 'reactRingWobble']) {
+      const steps = [{ expression: 3, seconds: 1 }, { trigger, seconds: 0.6 }];
+      const actual = await renderRiveStateSequence(renderer, rig, bytes, steps);
+      const expected = await renderRiveStateSequence(renderer, rig, controlBytes, steps);
+      expect(compareFrames(actual[1]!, expected[1]!).diffPixels, `${trigger}: changed cry pupil`).toBe(0);
+    }
+  } finally { await renderer.close(); }
+});

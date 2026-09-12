@@ -22,7 +22,7 @@
 import { EASES } from '#ir/easing.ts';
 import { interpolatePath } from '#ir/path.ts';
 import { key, track } from '#ir/clip.ts';
-import { groupTracks, resolvePath, sampleShape, sampleNumeric, type TracksByProperty } from '#ir/sample.ts';
+import { groupTracks, resolvePath, sampleShape, type TracksByProperty } from '#ir/sample.ts';
 import type { Clip, EaseName, Machine, MachineTransition, Rig, RigPart, Vec2 } from '#ir/types.ts';
 import { maskNeedsReversal, reverseContours, splitSubpaths, subpathToVertices, type VertexData } from '#export-rive/geometry.ts';
 import { KEYS } from '#export-rive/keys.generated.ts';
@@ -125,6 +125,8 @@ interface FrameValue {
 /** Builds one shared artboard with all supplied clips for this rig and the state
  * graph. Include every referenced clip; extra clips remain available for scrubbing. */
 export function exportRiveMachine(rig: Rig, clips: Clip[], machine: Machine): Buffer {
+  clips = [...clips, ...Object.values(machine.layers).flatMap(layer =>
+    Object.values(layer.bridges ?? {}).flatMap(destinations => Object.values(destinations)))];
   const w = new RivWriter();
   const clipsByName = new Map(clips.map((c) => [c.name, c]));
   w.object(BACKBOARD, []);
@@ -136,6 +138,7 @@ export function exportRiveMachine(rig: Rig, clips: Clip[], machine: Machine): Bu
 
   const partByName = new Map(rig.parts.map((p) => [p.name, p]));
   const nodeIndexByPart = new Map<string, number>();
+  const drawingIndexByPart = new Map<string, number>();
   let cursor = 0;
   const add = (typeKey: number, properties: [number, number | string][]): number => {
     w.object(typeKey, properties);
@@ -157,6 +160,8 @@ export function exportRiveMachine(rig: Rig, clips: Clip[], machine: Machine): Bu
       [NODE_Y, part.pivot[1] - parentPivot[1]],
     ]);
     nodeIndexByPart.set(part.name, nodeIndex);
+    // Opacity belongs to this drawing, never to its children or shape selection.
+    drawingIndexByPart.set(part.name, add(NODE, [[PARENT_ID, nodeIndex], [NAME, `${part.name}-drawing`]]));
   }
 
   // All supplied animations share one artboard. Compatible paths share vertices,
@@ -213,7 +218,7 @@ export function exportRiveMachine(rig: Rig, clips: Clip[], machine: Machine): Bu
     for (const mask of clipSources.has(part.name) ? [false, true] : [false]) {
       for (const [g, path] of representatives.entries()) {
         const activeAtRest = part.path && interpolatePath(path, part.path, 0) !== null;
-        let shapeParent = nodeIndexByPart.get(part.name)!;
+        let shapeParent = drawingIndexByPart.get(part.name)!;
         let gateIndex: number | undefined;
         if (mask) {
           // Gate in identity space BEFORE replaying the source ancestor transforms.
@@ -366,7 +371,13 @@ export function exportRiveMachine(rig: Rig, clips: Clip[], machine: Machine): Bu
           }
         }
       }
-      if (!partialClipNames.has(clipName) || tracks.shape || tracks.opacity) {
+      if (!partialClipNames.has(clipName) || tracks.opacity) {
+        w.object(KEYED_OBJECT, [[KEYED_OBJECT_ID, drawingIndexByPart.get(part.name)!]]);
+        writeDoubleTrack(NODE_OPACITY, (tracks.opacity?.keys ?? [key(0, 1)]).map(k => ({
+          frame: toFrame(k.t), value: k.v, ease: k.ease,
+        })));
+      }
+      if (!partialClipNames.has(clipName) || tracks.shape) {
         const changing = tracks.shape && new Set(tracks.shape.keys.map((k) => k.v)).size > 1;
         // Bake Cartesian path interpolation before converting handles to Rive's
         // polar representation. Four samples per output frame also cover rapid blinks.
@@ -388,17 +399,10 @@ export function exportRiveMachine(rig: Rig, clips: Clip[], machine: Machine): Bu
             writeDoubleTrack(NODE_SCALE_Y, activation);
           } else {
             w.object(KEYED_OBJECT, [[KEYED_OBJECT_ID, geometry.shapeIndex]]);
-            const opacity = tracks.opacity;
-            if (!changing) {
-              const weight = samples[0]?.opacity ?? 0;
-              writeDoubleTrack(NODE_OPACITY, (opacity?.keys ?? [key(0, 1)]).map((k) => ({
-                frame: toFrame(k.t), value: weight * k.v, ease: k.ease,
-              })));
-            } else {
-              writeDoubleTrack(NODE_OPACITY, times.map((t,i) => ({
-                frame: toFrame(t), value: (samples[i]?.opacity ?? 0) * (opacity ? sampleNumeric(opacity, t) : 1),
-              })));
-            }
+            // Geometry visibility is owned solely by the expression/shape track.
+            writeDoubleTrack(NODE_OPACITY, times.map((t, i) => ({
+              frame: toFrame(t), value: samples[i]?.opacity ?? 0,
+            })));
           }
           // Keep full geometry even when inactive. The clamped activation scale
           // removes inactive masks without blending their vertices toward a point.
@@ -506,7 +510,9 @@ export function exportRiveMachine(rig: Rig, clips: Clip[], machine: Machine): Bu
   for (const [layerName, layer] of Object.entries(machine.layers)) {
     w.object(STATE_MACHINE_LAYER, [[SM_NAME, layerName]]);
 
-    const wildcardTransitions = layer.transitions.filter((t) => t.from === '*');
+    const wildcardTransitions = layer.transitions.filter((t) => t.from === '*' && !layer.bridges);
+    const bridges = Object.entries(layer.bridges ?? {}).flatMap(([from, destinations]) =>
+      Object.entries(destinations).map(([to, clip]) => ({from, to, clip, name: `__bridge-${from}-${to}`})));
     const namedTransitionsByFrom = new Map<string, MachineTransition[]>();
     for (const tr of layer.transitions) {
       if (tr.from === '*') continue;
@@ -530,6 +536,8 @@ export function exportRiveMachine(rig: Rig, clips: Clip[], machine: Machine): Bu
       nextIndex += 1;
     }
 
+    for (const bridge of bridges) stateIndex.set(bridge.name, nextIndex++);
+
     // EntryState, wired with one unconditional, instant transition to `layer.entry`.
     w.object(ENTRY_STATE, []);
     writeTransition(layer.entry, 0, undefined, stateIndex);
@@ -543,13 +551,26 @@ export function exportRiveMachine(rig: Rig, clips: Clip[], machine: Machine): Bu
       const state = layer.states[name]!;
       const animationId = state.clip ? animationIdByClip.get(state.clip)! : NO_ANIMATION_ID;
       w.object(ANIMATION_STATE, [[ANIMATION_ID, animationId]]);
-      for (const tr of namedTransitionsByFrom.get(name) ?? []) writeTransition(tr.to, tr.duration, tr.when, stateIndex);
+      for (const tr of namedTransitionsByFrom.get(name) ?? []) {
+        if (!layer.bridges) writeTransition(tr.to, tr.duration, tr.when, stateIndex);
+      }
+      if (layer.bridges) for (const tr of layer.transitions) {
+        if (tr.to === name || (tr.from !== '*' && tr.from !== name)) continue;
+        const bridge = bridges.find(b => b.from === name && b.to === tr.to);
+        if (!bridge) throw new Error(`Missing bridge ${name} -> ${tr.to}`);
+        // Blend the current pose into closure without fading between eye contours.
+        writeTransition(bridge.name, 1 / 15, tr.when, stateIndex);
+      }
       // Release one-shot overlays; holding their last key would pin the face at
       // rest and suppress the expression's subsequent glances and breathing.
       if (state.clip && state.mode === 'once' && !clipsByName.get(state.clip)!.loop
         && layer.states[layer.entry]!.clip === null && !namedTransitionsByFrom.has(name)) {
         writeTransition(layer.entry, 0.12, undefined, stateIndex, true);
       }
+    }
+    for (const bridge of bridges) {
+      w.object(ANIMATION_STATE, [[ANIMATION_ID, animationIdByClip.get(bridge.clip.name)!]]);
+      writeTransition(bridge.to, 0, undefined, stateIndex, true);
     }
   }
 

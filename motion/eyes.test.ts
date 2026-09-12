@@ -95,3 +95,14 @@ test('expression transitions do not compress pupils during the hidden contour sw
     }
   }
 });
+
+test('celebration hides incompatible eye contours while switching to and from happy', () => {
+  const rig = getRig('pubnyan');
+  const clip = clips.find(c => c.name === 'celebrate')!;
+  for (const t of [0.25, 0.7167]) {
+    for (const part of sampleClip(rig, {...clip, tracks: clip.tracks.filter(t => t.part.startsWith('eye-'))}, t).filter(p => p.name.endsWith('.white'))) {
+      const [, top, , bottom] = svgPathBbox(svgpath(part.d).matrix(part.matrix).toString());
+      expect(bottom - top, `visible topology switch at ${t}`).toBeLessThan(0.01);
+    }
+  }
+});

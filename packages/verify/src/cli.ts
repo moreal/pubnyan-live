@@ -59,7 +59,9 @@ try {
   for (const [i, expression] of expressions.entries()) {
     const clipName = machine.layers.expression!.states[expression]!.clip;
     const clip = clips.find((c) => c.name === clipName)!;
-    const expected = await referenceFrame(renderer, machineRig, clip, 1);
+    // A bridge runs before the destination's sustained loop starts.
+    const bridgeDuration = i ? machine.layers.expression!.bridges?.[expressions[i - 1]!]?.[expression]?.duration ?? 0 : 0;
+    const expected = await referenceFrame(renderer, machineRig, clip, 1 - bridgeDuration);
     referenceFrames.push(expected);
     const diff = compareFrames(expected, machineFrames[i]!);
     const pass = diff.ratio <= PARITY_MAX_RATIO;

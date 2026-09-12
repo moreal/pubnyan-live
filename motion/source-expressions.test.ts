@@ -53,3 +53,14 @@ test.each(['to-angry', 'from-angry', 'to-curious', 'from-curious', 'to-shy', 'fr
     } finally { await renderer.close(); }
   },
 );
+
+test('normal keeps the source eye apertures and asymmetric pupils', () => {
+  const rig = getRig('pubnyan');
+  const paths = readSourceSvg(readFileSync('vendor/visual-identity/exports/pubnyan-normal-transparent.svg', 'utf8'));
+  const ref = center(rig.parts.find(p => p.name === 'nose')!.path!);
+  const origin = center(selectPath(paths, 'path23'));
+  for (const [name, selector] of [['eye-l.white','path11#outer'], ['eye-r.white','path9#outer'], ['eye-l.pupil','path21'], ['eye-r.pupil','path19']]) {
+    const expected = svgpath(selectPath(paths, selector)).translate(ref[0]-origin[0],ref[1]-origin[1]).round(2).toString();
+    expect(svgpath(rig.parts.find(p => p.name === name)!.path!).round(2).toString()).toBe(expected);
+  }
+});

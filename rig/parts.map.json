@@ -149,11 +149,11 @@
             "mouth": "path25"
           },
           "overrides": {
-            "eye-l.white": "eye-l-normal",
-            "eye-r.white": "eye-r-normal",
+            "eye-l.white": "source-eye-l-normal",
+            "eye-r.white": "source-eye-r-normal",
             "mouth": "mouth-normal",
-            "eye-l.pupil": "pupil-l-normal",
-            "eye-r.pupil": "pupil-r-normal",
+            "eye-l.pupil": "source-pupil-l-normal",
+            "eye-r.pupil": "source-pupil-r-normal",
             "head": "head-articulated",
             "ear-l": "ear-l-articulated",
             "ear-r": "ear-r-articulated",
@@ -251,6 +251,22 @@
             "eye-r.white": "eye-r-happy",
             "eye-l.pupil": "pupil-l-happy",
             "eye-r.pupil": "pupil-r-happy"
+          }
+        },
+        "closed": {
+          "file": "pubnyan-normal-transparent.svg",
+          "map": {
+            "nose": "path23",
+            "eye-l.white": null,
+            "eye-r.white": null,
+            "eye-l.pupil": null,
+            "eye-r.pupil": null,
+            "mouth": null,
+            "tear-l": null,
+            "tear-r": null
+          },
+          "overrides": {
+            "nose": "normal-nose-aligned"
           }
         }
       }

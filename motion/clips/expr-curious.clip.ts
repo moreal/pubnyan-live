@@ -8,11 +8,6 @@ export default clip('expr-curious', { rig: 'pubnyan', duration: 5.4, fps: 60, lo
   track('ear-r', 'rotation', [key(0, 0), key(0.56, 0), key(0.74, 1.2, 'inOutCubic'), key(1.15, -5.8, 'outCubic'), key(1.47, -3.2, 'inOutSine'), key(2.26, -3.2), key(2.69, -5.2, 'outCubic'), key(3.36, -5.2), key(4.62, 0, 'inOutSine'), key(5.4, 0)]),
   track('ear-l', 'rotation', [key(0, 0), key(0.88, 0), key(1.3, 3.8, 'outCubic'), key(1.65, 2, 'inOutSine'), key(3.45, 2), key(4.72, 0, 'inOutSine'), key(5.4, 0)]),
   ...expressionShapes('curious'), ...blink(5.4, 3.66),
-  ...['eye-l.pupil', 'eye-r.pupil'].map((part) => track(part, 'position', [
-    key(0, [0, 0]), key(0.38, [0, 0]), key(0.53, [2, -1], 'outCubic'),
-    key(2.04, [2, -1]), key(2.2, [1.2, -0.6], 'outCubic'),
-    key(3.68, [1.2, -0.6]), key(3.83, [0, 0], 'inOutCubic'), key(5.4, [0, 0]),
-  ])),
   ...['eye-l.white', 'eye-r.white'].map((part) => track(part, 'position', [
     key(0, [0, 0]), key(0.43, [0, 0]), key(0.63, [0.8, -0.4], 'outCubic'),
     key(2.04, [0.8, -0.4]), key(2.24, [0.48, -0.24], 'outCubic'),

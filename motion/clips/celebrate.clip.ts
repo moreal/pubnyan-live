@@ -53,14 +53,21 @@ export default clip('celebrate', { rig: 'pubnyan', duration: 1.5, fps: 60, loop:
     key(0, 'default'), key(0.12, 'default'), key(0.28, 'happy', 'outCubic'),
     key(0.86, 'happy'), key(1.24, 'default', 'inOutSine'), key(1.5, 'default'),
   ]),
-  // Only lids morph. Pupils retain their round shape and hide behind the closed smile.
-  // Hold the joyful arch through the landing, then greet the viewer again.
-  ...['eye-l.white', 'eye-r.white'].map(part => track(part, 'shape', [
-    key(0, 'default'), key(0.16, 'default'), key(0.28, 'happy', 'inOutCubic'),
-    key(0.62, 'happy'), key(0.84, 'default', 'inOutCubic'), key(1.5, 'default'),
-  ])),
+  // Preserve source pupils. Exchange incompatible apertures while fully closed.
+  ...['eye-l.white', 'eye-r.white'].flatMap(part => [
+    track(part, 'shape', [
+      key(0, 'default'), key(0.2333, 'default'), key(0.2667, 'happy'),
+      key(0.7, 'happy'), key(0.7333, 'default'), key(1.5, 'default'),
+    ]),
+    track(part, 'scale', [
+      key(0, [1, 1]), key(0.15, [1, 1]), key(0.2333, [1, 0], 'inOutCubic'),
+      key(0.2667, [1, 0]), key(0.4, [1, 1], 'inOutSine'),
+      key(0.6167, [1, 1]), key(0.7, [1, 0], 'inOutCubic'),
+      key(0.7333, [1, 0]), key(0.9, [1, 1], 'inOutSine'), key(1.5, [1, 1]),
+    ]),
+  ]),
   ...['eye-l.pupil', 'eye-r.pupil'].map(part => track(part, 'opacity', [
-    key(0, 1), key(0.27, 1), key(0.28, 0, 'inOutSine'), key(0.62, 0),
-    key(0.62 + 1 / 60, 1, 'inOutSine'), key(1.5, 1),
+    key(0, 1), key(0.2167, 1), key(0.2333, 0, 'inOutSine'), key(0.7333, 0),
+    key(0.7667, 1, 'inOutSine'), key(1.5, 1),
   ])),
 ]);

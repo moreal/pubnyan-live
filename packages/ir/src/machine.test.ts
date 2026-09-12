@@ -40,3 +40,14 @@ describe('machine', () => {
     }
   });
 });
+
+test('rejects incomplete or invalid transition bridges before exporting', () => {
+  const m = machine({rig:'r',inputs:{mood:{type:'enum',values:['a','b'],default:'a'}},layers:{base:{
+    entry:'a',states:{a:{clip:'idle',mode:'loop'},b:{clip:'idle',mode:'loop'}},
+    transitions:[{from:'*',to:'b',when:{input:'mood',equals:'b'},duration:0.1}],
+    bridges:{a:{b:{...clips[0]!,name:'bridge',loop:true,rig:'wrong'}}},
+  }}});
+  expect(validateMachine(m,rig,clips).join('\n')).toContain('bridge');
+  m.layers.base!.bridges={};
+  expect(validateMachine(m,rig,clips).join('\n')).toContain('missing bridge');
+});

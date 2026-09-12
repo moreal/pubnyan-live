@@ -52,3 +52,11 @@ Use ring rotations around ±4°, head rotations around ±4°, and ear accents ar
 ## Source expression fidelity
 
 Curious, angry, and shy eye and mouth overrides are exact source paths, translated to the normal nose and then the shared gutter. They are not simplified to four-cubic ovals for morph compatibility. Their transition clips conceal eye topology changes during a brief closed blink; shy keeps its original squeezed-shut eyes throughout its sustained loop. `motion/source-expressions.test.ts` checks these contours against the vendor SVGs to prevent replacement with invented shapes.
+
+
+Normal eye overrides are aligned copies of the source `path11#outer`,
+`path9#outer`, `path21`, and `path19`. Keeping only each white outer contour
+avoids a fixed pupil-shaped hole underneath the animated separate pupil.
+`closed` is an internal transition shape, not a public emotion input: both
+whites, pupils, mouth, and tears are null. Rive bridges use this to hide geometry
+independently of reaction scale and opacity channels.

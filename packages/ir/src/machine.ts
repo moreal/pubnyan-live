@@ -1,3 +1,4 @@
+import { validateClip } from '#ir/clip.ts';
 import type { Clip, Machine, Rig } from '#ir/types.ts';
 
 export function machine(def: Machine): Machine {
@@ -19,8 +20,21 @@ export function validateMachine(m: Machine, rig: Rig, clips: Clip[]): string[] {
     for (const [stateName, state] of Object.entries(layer.states)) {
       if (state.clip !== null && !clipNames.has(state.clip)) errors.push(`${at} state "${stateName}": unknown clip "${state.clip}"`);
     }
+    for (const [from, destinations] of Object.entries(layer.bridges ?? {})) {
+      if (!(from in layer.states)) errors.push(`${at}: bridge from unknown state "${from}"`);
+      for (const [to, bridge] of Object.entries(destinations)) {
+        if (!(to in layer.states)) errors.push(`${at}: bridge to unknown state "${to}"`);
+        if (bridge.loop) errors.push(`${at}: bridge "${bridge.name}" must not loop`);
+        if (clipNames.has(bridge.name)) errors.push(`${at}: duplicate bridge clip "${bridge.name}"`);
+        clipNames.add(bridge.name);
+        errors.push(...validateClip(bridge, rig).map(e => `${at} bridge ${from}->${to}: ${e}`));
+      }
+    }
     for (const [i, tr] of layer.transitions.entries()) {
       const tat = `${at} transitions[${i}]`;
+      if (layer.bridges) for (const from of tr.from === '*' ? Object.keys(layer.states) : [tr.from]) {
+        if (from !== tr.to && !layer.bridges[from]?.[tr.to]) errors.push(`${tat}: missing bridge ${from}->${tr.to}`);
+      }
       if (tr.from !== '*' && !(tr.from in layer.states)) errors.push(`${tat}: unknown state "${tr.from}"`);
       if (!(tr.to in layer.states)) errors.push(`${tat}: unknown state "${tr.to}"`);
       if (!(tr.duration >= 0)) errors.push(`${tat}: duration must be >= 0`);

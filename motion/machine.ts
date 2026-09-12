@@ -1,4 +1,5 @@
 import { machine } from '#ir/machine.ts';
+import { expressionBridges } from './clips/expression-bridges.ts';
 
 /**
  * Each expression owns its breathing and eye motion. A separate always-on blink
@@ -22,6 +23,7 @@ export default machine({
   },
   layers: {
     expression: {
+      bridges: expressionBridges,
       // Blend from the current performance, including emotion-to-emotion changes.
       // The standalone to/from clips remain available for explicit transition playback.
       entry: 'normal',

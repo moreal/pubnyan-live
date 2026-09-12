@@ -55,7 +55,7 @@ test('real expression inputs change faces and returning to normal clears tears a
   const names = ['idle', 'expr-cry', 'expr-curious', 'expr-shy', 'expr-angry', 'idle'];
   const frames = await renderRiveStateSequence(renderer, rig, exportRiveMachine(rig, clips, machine), states.map((expression) => ({expression, seconds:1})));
   for (const [i, name] of names.entries()) {
-    const expected = await referenceFrame(renderer, rig, clips.find((clip) => clip.name === name)!, 1);
+    const expected = await referenceFrame(renderer, rig, clips.find((clip) => clip.name === name)!, i === 0 ? 1 : 0.6);
     expect(compareFrames(frames[i]!, expected).ratio, name).toBeLessThanOrEqual(0.002);
   }
 });

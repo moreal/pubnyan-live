@@ -22,7 +22,7 @@ a prepared head turn, a second inquisitive tilt holds, and one blink releases it
 investigative lean, two unequal sobs with falling tears, a bashful downward glance with a brief open-eyed peek,
 and a restrained huff. Each includes pauses and returns to its opening pose.
 
-The expression layer plays these loops directly, blending between states. It owns
+The Rive expression layer plays these loops through 0.4-second closed-eye bridges between states. It owns
 breathing and eye motion, so the neutral blink does not squash an expression's
 already-closed eyes. Standalone `to-*` and `from-*` clips remain available for clients
 that explicitly sequence transitions. `expression-motion.ts` shares the blink,
@@ -94,7 +94,7 @@ rotations within 6°. The star muzzle follows the head without separate distorti
 The wink closes toward the lower lid with a small downward shift and a brief
 closed hold. Its reopening, shared blinks, and expression eye transitions use
 a gentle start and finish so the eye does not pop open in the first frame.
-Only whites compress; pupil geometry and gaze remain unchanged. Each pupil declares `clipTo` with its white eye part in the rig. Native clipping
+Only whites compress; original pupil geometry and gaze remain unchanged. Each pupil declares `clipTo` with its white eye part in the rig. Native clipping
 follows the animated aperture in SVG, Lottie, and Rive, independently of face or
 pupil color. The short closed-lid concealment keeps the white eyelid readable;
 regression tests also verify pupil size and contrasting-color occlusion.
@@ -120,14 +120,37 @@ The latest visual pass gives `idle` a held torso lean and `ring-wobble` an
 opposing torso roll, so attention and balance read through the whole silhouette.
 The default mouth again matches the source SVG’s small triangular smile.
 Celebration morphs only the whites into curved happy lids. Pupils keep their
-round geometry and hide briefly at closure; reopening reveals them at full size. See [acting direction](../docs/motion-direction.md)
+original source geometry and hide briefly at closure; reopening reveals them at full size. See [acting direction](../docs/motion-direction.md)
 for the source-grounded movement vocabulary and visual review criteria.
 
 Standalone `to-cry` and `from-cry` now exchange their incompatible eye geometry
 during a closed blink, with pupils hidden through the swap. `from-cry` starts
-from the sustained loop’s neutral head pose. Direct machine emotion blending
-continues to use its existing crossfade rather than these standalone clips.
+from the sustained loop’s neutral head pose. Direct Rive emotion changes use internal closed-eye bridges. A hidden `closed` rig shape removes both eyes and pupils during the contour exchange, even when a reaction is active.
 
 See `../docs/interaction-review.md` for the full interaction audit. Reactions blend
 from the current pose over 100 ms; expression return clips start at rest. The
 loading star fits its complete rotation inside the artboard at 60 fps.
+
+
+### Eye continuity
+
+Normal eyes retain the source outer white contours and asymmetric pupil paths,
+aligned on the nose. Source holes are removed from white apertures so there is
+only one independently moving pupil per eye. Curious has no separate pupil;
+its gaze lives in the source white contour.
+
+Rive drawing opacity is independent of expression geometry selection. A wink,
+nod or ring gesture cannot re-enable absent pupils or substitute normal pupils
+for crying pupils. Closing/opening bridges live in `clips/expression-bridges.ts`
+and are carried as internal clips in `machine.layers.expression.bridges`.
+They preserve the public clip list and input names. A new expression requested
+mid-bridge is applied after the current bridge completes; the latest value wins.
+A bridge takes 0.4 s before the destination loop's clock starts. The hidden
+`closed` shape prevents reaction layers from exposing a contour exchange.
+Celebration also exchanges its incompatible eye shapes during a closed hold.
+
+The dotLottie bundle still uses its documented single-animation flattening;
+internal Rive bridges and concurrent reaction layers do not apply to that
+flattened state machine. Standalone SVG/Lottie/video transitions retain their
+own authored blinks. Regression coverage includes real Rive reaction/emotion
+combinations and expression changes during an active reaction.
