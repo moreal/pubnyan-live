@@ -71,14 +71,18 @@ export interface ParityResult {
   skipped: number[];
 }
 
-export async function checkParity(renderer: Renderer, rig: Rig, clip: Clip, target: Target, times = sampleTimes(clip)): Promise<ParityResult> {
+/** Supplied references must match `times` in order and come from the same rig and clip. */
+export async function checkParity(renderer: Renderer, rig: Rig, clip: Clip, target: Target, times = sampleTimes(clip), cachedReferenceFrames?: readonly Buffer[]): Promise<ParityResult> {
+  if (cachedReferenceFrames !== undefined && cachedReferenceFrames.length !== times.length) {
+    throw new Error(`reference frame count ${cachedReferenceFrames.length} does not match sample time count ${times.length}`);
+  }
   const referenceFrames: Buffer[] = [];
   const targetFrames: Buffer[] = [];
   const frames: ParityResult['frames'] = [];
   const skipped: number[] = [];
   let worst: ParityResult['worst'] | undefined;
-  for (const t of times) {
-    const ref = await referenceFrame(renderer, rig, clip, t);
+  for (const [i, t] of times.entries()) {
+    const ref = cachedReferenceFrames === undefined ? await referenceFrame(renderer, rig, clip, t) : cachedReferenceFrames[i]!;
     const got = await target.renderFrame(renderer, rig, clip, t);
     const d = compareFrames(ref, got);
     referenceFrames.push(ref);

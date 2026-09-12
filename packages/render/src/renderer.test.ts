@@ -33,3 +33,20 @@ test('each evaluation waits for its own asynchronous result on the reused page',
   </script>`);
   expect(next).toBe(2);
 });
+
+test('each ready render waits for its own delayed readiness on the reused page', async () => {
+  await renderer.renderHtmlWhenReady('<script>window.__ready=true;</script>', 20, 20);
+  const next = PNG.sync.read(await renderer.renderHtmlWhenReady(`<div id="color" style="width:20px;height:20px;background:#fff"></div><script>
+    setTimeout(()=>{document.getElementById('color').style.background='#000';window.__ready=true;},250);
+  </script>`, 20, 20));
+  expect(pixel(next, 10, 10)).toBe(0);
+});
+
+test('a ready render clears the previous operation error before loading new content', async () => {
+  await expect(renderer.renderHtmlWhenReady('<script>window.__error="previous failure";</script>', 20, 20))
+    .rejects.toThrow('previous failure');
+  const next = PNG.sync.read(await renderer.renderHtmlWhenReady(`<div id="color" style="width:20px;height:20px;background:#fff"></div><script>
+    setTimeout(()=>{document.getElementById('color').style.background='#000';window.__ready=true;},250);
+  </script>`, 20, 20));
+  expect(pixel(next, 10, 10)).toBe(0);
+});

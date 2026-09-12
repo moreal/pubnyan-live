@@ -2,49 +2,52 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { exportLottieBundle } from '#export-lottie/bundle.ts';
 import { exportRiveMachine } from '#export-rive/machine.ts';
-import { exportVideo } from '#export-video/index.ts';
 import { writeSvgManifest } from '#export-svg/manifest.ts';
 import { clips, getRig, machine } from '#motion/index.ts';
 import { contactSheet } from '#verify/contact-sheet.ts';
 import { bundledClipNames, checkDotlottieBundle, machineInputNames } from '#verify/dotlottie-check.ts';
 import { fixtureClips } from '#verify/fixtures/clips.ts';
-import { checkParity, compareFrames, sampleTimes } from '#verify/parity.ts';
+import { compareFrames } from '#verify/parity.ts';
 import { referenceFrame } from '#verify/reference.ts';
 import { renderRiveStateSequence } from '#verify/rive-machine-check.ts';
 import { PARITY_MAX_RATIO } from '#verify/config.ts';
 import { Renderer } from '#render/renderer.ts';
-import { TARGETS } from '#verify/targets/index.ts';
+import { verifyClips, exportVideoClips, verificationWorkers, type ReportEntry, type ClipTiming } from './pipeline.ts';
 
 const ROOT = new URL('../../../', import.meta.url).pathname;
 const DIST = join(ROOT, 'dist');
 const VERIFY_DIR = join(DIST, 'verify');
 
 await mkdir(VERIFY_DIR, { recursive: true });
-const renderer = await Renderer.launch();
-const report: { clip: string; target: string; pass: boolean; worstT: number; worstRatio: number; skipped: number[] }[] = [];
+const workers = verificationWorkers();
+const started = performance.now();
+let renderer: Renderer | undefined;
+const report: ReportEntry[] = [];
+const timings = { workers, totalMs: 0, phasesMs: {} as Record<string, number>,
+  parityClips: [] as ClipTiming[], videoClips: [] as {clip: string; totalMs: number}[] };
+const finishPhase = (name: string, start: number) => {
+  timings.phasesMs[name] = performance.now() - start;
+  const pool = name === 'parity' || name === 'video' ? ` (${workers} workers)` : '';
+  console.log(`TIMING ${name}: ${(timings.phasesMs[name]! / 1000).toFixed(2)}s${pool}`);
+};
 let failed = false;
 try {
-  // Fixtures cover branches the registered clips do not reach; they are verified but never exported.
-  for (const clip of [...clips, ...fixtureClips]) {
-    const registered = clips.includes(clip);
-    const rig = getRig(clip.rig);
-    const times = sampleTimes(clip);
-    const rows: { label: string; frames: Buffer[] }[] = [];
-    for (const target of TARGETS) {
-      if (registered) await target.export(rig, clip, join(DIST, target.name));
-      const result = await checkParity(renderer, rig, clip, target, times);
-      if (rows.length === 0) rows.push({ label: 'reference', frames: result.referenceFrames });
-      rows.push({ label: target.name, frames: result.targetFrames });
-      await writeFile(join(VERIFY_DIR, `${clip.name}-${target.name}-worst.png`), result.worst.diff);
-      report.push({ clip: clip.name, target: target.name, pass: result.pass, worstT: result.worst.t, worstRatio: result.worst.ratio, skipped: result.skipped });
-      failed ||= !result.pass;
-      const status = result.pass ? 'PASS' : 'FAIL';
+  // Parallel clips own separate pages. Reference frames are rendered once per clip.
+  const parityStarted = performance.now();
+  const parity = await verifyClips([...clips, ...fixtureClips], getRig, {
+    outputDir: DIST, verifyDir: VERIFY_DIR, workers, shouldExport: clip => clips.includes(clip),
+    onResult: result => {
       const skipNote = result.skipped.length ? ` (skipped t=${result.skipped.join(',')}s: unsupported by target)` : '';
-      console.log(`${status} ${clip.name} / ${target.name}: worst ${(result.worst.ratio * 100).toFixed(3)}% at t=${result.worst.t}s${skipNote}`);
-    }
-    await writeFile(join(VERIFY_DIR, `${clip.name}-contact.png`), await contactSheet(renderer, times, rows));
-  }
+      console.log(`${result.pass ? 'PASS' : 'FAIL'} ${result.clip} / ${result.target}: worst ${(result.worstRatio * 100).toFixed(3)}% at t=${result.worstT}s${skipNote}`);
+    },
+  });
+  report.push(...parity.report);
+  timings.parityClips = parity.timings;
+  failed ||= parity.report.some(result => !result.pass);
+  finishPhase('parity', parityStarted);
 
+  const machineStarted = performance.now();
+  renderer = await Renderer.launch();
   // The combined file must render expression inputs faithfully, not just load.
   const machineRig = getRig(machine.rig);
   const machineBytes = exportRiveMachine(machineRig, clips.filter((c) => c.rig === machine.rig), machine);
@@ -72,12 +75,20 @@ try {
   await writeFile(join(VERIFY_DIR, 'rive-machine-contact.png'), await contactSheet(renderer,
     expressions.map((_, i) => i + 1), [{label:'reference',frames:referenceFrames},{label:'rive-machine',frames:machineFrames}]));
 
-  // Not a parity target: no reference to diff against, just render mp4/webp/gif for each clip.
-  for (const clip of clips) {
-    const files = await exportVideo(renderer, getRig(clip.rig), clip, join(DIST, 'video'));
-    console.log(`wrote ${files.map((f) => f.replace(DIST, 'dist')).join(', ')}`);
-  }
+  await renderer.close();
+  renderer = undefined;
+  finishPhase('machine', machineStarted);
 
+  // Video clips also have independent temp directories, output names and pages.
+  const videoStarted = performance.now();
+  timings.videoClips = await exportVideoClips(clips, getRig, {
+    outputDir: join(DIST, 'video'), workers,
+    onResult: files => console.log(`wrote ${files.map(file => file.replace(DIST, 'dist')).join(', ')}`),
+  });
+  finishPhase('video', videoStarted);
+
+  const bundleStarted = performance.now();
+  renderer = await Renderer.launch();
   // The .lottie bundle isn't a per-clip parity target: load the real bytes with dotlottie-web
   // and confirm the manifest lists every clip and the state machine's inputs match the machine.
   const bundleRig = getRig(machine.rig);
@@ -106,8 +117,11 @@ try {
     failed = true;
     console.log(`FAIL pubnyan.lottie / dotlottie-web: ${(err as Error).message}`);
   }
+  finishPhase('bundle', bundleStarted);
 } finally {
-  await renderer.close();
+  await renderer?.close();
+  timings.totalMs = performance.now() - started;
+  await writeFile(join(VERIFY_DIR, 'timings.json'), JSON.stringify(timings, null, 2) + '\n');
 }
 // The svg target has now written every registered clip, so the manifest matches what is on disk.
 await writeSvgManifest(clips, join(DIST, 'svg'));

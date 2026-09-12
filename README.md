@@ -26,6 +26,26 @@ npm run agent -- 1     # let the Flue director complete one backlog item (needs 
                         # the artist subagent (graphics/visual items) runs on openai-codex/gpt-6-astra and authenticates via a ChatGPT Plus/Pro (Codex) subscription; run `pi login openai-codex` once to connect it
 ```
 
+## Verification performance
+
+`npm run verify` uses two independent clip workers by default (one on a single-core
+machine). Each worker owns its own Chrome page; reference frames are reused across
+SVG, Lottie and Rive. Video clips use the same bounded worker count. Samples,
+thresholds, contact sheets and report ordering stay the same.
+
+```sh
+VERIFY_WORKERS=1 npm run verify            # serial troubleshooting
+VERIFY_WORKERS=2 npm run check             # full check with bounded rendering
+npm run verify:bench -- --workers 1        # representative local serial run
+npm run verify:bench -- --workers 2        # compare parallel run on the same host
+```
+
+Stage and clip timings are written to `dist/verify/timings.json`. Local benchmark
+results are written to `dist/verify/benchmark-<n>-workers.json`; `--stage parity`
+or `--stage video` narrows the benchmark, and `--clips name,name` selects clips.
+Run benchmarks alone: tests and SVG verification write the same exported files.
+See [the investigation and measurements](docs/check-performance.md).
+
 ## GitHub Pages
 
 `.github/workflows/pages.yml` publishes https://moreal.github.io/pubnyan-live/ on every push to `main` (and via `workflow_dispatch`):

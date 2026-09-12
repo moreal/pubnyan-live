@@ -28,6 +28,7 @@
     "export:rive": "node packages/export-rive/src/cli.ts",
     "export:video": "node packages/export-video/src/cli.ts",
     "verify": "node packages/verify/src/cli.ts",
+    "verify:bench": "node scripts/benchmark-verify.mjs",
     "check": "npm run check:types && npm test && npm run verify",
     "agent": "node scripts/agent-loop.mjs",
     "plan": "node scripts/plan.mjs",

@@ -16,8 +16,14 @@ export class Renderer {
     // running without the sandbox there is an acceptable tradeoff.
     const args = process.env.CI ? ['--no-sandbox', '--disable-setuid-sandbox'] : [];
     const browser = await puppeteer.launch({ args });
-    const page = await browser.newPage();
-    return new Renderer(browser, page);
+    try {
+      const page = await browser.newPage();
+      return new Renderer(browser, page);
+    } catch (error) {
+      // A worker cannot dispose a resource that its factory failed to return.
+      await browser.close().catch(() => {});
+      throw error;
+    }
   }
 
   async renderHtml(html: string, width: number, height: number, pauseAtMs?: number): Promise<Buffer> {
@@ -48,7 +54,8 @@ export class Renderer {
     const w = Math.ceil(width);
     const h = Math.ceil(height);
     await this.page.setViewport({ width: w, height: h, deviceScaleFactor: 1 });
-    await this.page.setContent(`<!doctype html><html><body style="margin:0;background:#fff">${html}</body></html>`);
+    // setContent retains the window, so reset the handshake before the new content runs.
+    await this.page.setContent(`<!doctype html><html><body style="margin:0;background:#fff"><script>window.__ready=false;window.__error=undefined;</script>${html}</body></html>`);
     await this.page.waitForFunction('window.__ready === true || window.__error', { timeout: timeoutMs });
     const error = await this.page.evaluate(() => (globalThis as unknown as { __error?: string }).__error);
     if (error) throw new Error(`page render failed: ${error}`);
