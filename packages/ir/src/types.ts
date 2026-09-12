@@ -80,10 +80,13 @@ export interface MachineState {
   mode: 'loop' | 'once';
 }
 
+export type MachineCondition = { input: string; equals: string | boolean } | { input: string; fired: true };
+
 export interface MachineTransition {
   from: string | '*';
   to: string;
-  when: { input: string; equals: string | boolean } | { input: string; fired: true };
+  /** The primary condition and every additional condition must hold. */
+  when: MachineCondition & { and?: MachineCondition[] };
   /** crossfade seconds */
   duration: number;
 }

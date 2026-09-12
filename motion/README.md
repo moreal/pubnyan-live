@@ -107,8 +107,32 @@ cycle absent from the source drawing.
 The `celebration` machine layer is separate from ordinary `reaction` overlays.
 It temporarily owns the full face (including the happy smile), then releases all
 channels to the continuing emotion. Keeping shape changes out of `reaction`
-allows nods, winks and ring gestures to preserve an angry or crying expression.
-`motion/reaction-layer.test.ts` checks active reactions and the release in Rive.
+preserves the underlying expression geometry. `motion/reaction-layer.test.ts`
+uses an explicitly unrestricted test machine to keep that exporter guarantee
+covered independently of the public acting policy.
+
+`reaction-policy.js` is the shared allowlist for the machine, site and Storybook:
+
+| Expression | Allowed reactions |
+| --- | --- |
+| normal | all |
+| curious | nod, tilt, ear-twitch, ring-wobble |
+| shy | wink, nod, ear-twitch |
+| angry, cry | ear-twitch |
+
+The legacy `reactTailFlick` input follows ring-wobble's policy. Disallowed triggers
+are ignored, never queued or converted into a different action. A change to an
+incompatible expression releases the active overlay over 0.12 seconds; compatible
+reactions continue. Buttons remain in place but become disabled, and keyboard and
+canvas shortcuts use the same policy. Direct Rive input calls are also guarded.
+`motion/reaction-policy.test.ts` exercises the real Rive runtime, including
+completion, cancellation, and rejected-trigger non-replay.
+
+Machine transitions may include `when.and` conditions; all conditions must hold.
+The dotLottie export preserves these guards and maps overlay releases to the
+selected expression. Its existing single-animation limitation remains: it cannot
+layer a reaction over an expression like Rive does. Standalone clip files remain
+available for explicit playback and do not enforce a persistent emotion policy.
 
 After exporting, run `node scripts/motion-contact-review.mjs` for compact
 `dist/verify/<clip>-review.png` sheets with eight selected poses and all four

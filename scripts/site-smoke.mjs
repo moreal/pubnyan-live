@@ -81,6 +81,27 @@ async function run(server) {
       check(`format tab ${format}`, rendered);
     }
 
+    const permitted = {
+      normal: ['react', 'reactNod', 'reactTilt', 'reactEarTwitch', 'reactRingWobble', 'reactCelebrate'],
+      angry: ['reactEarTwitch'],
+      curious: ['reactNod', 'reactTilt', 'reactEarTwitch', 'reactRingWobble'],
+      cry: ['reactEarTwitch'],
+      shy: ['react', 'reactNod', 'reactEarTwitch'],
+    };
+    for (const [expression, expected] of Object.entries(permitted)) {
+      await page.click(`#stage-expressions [data-expression="${expression}"]`);
+      const enabled = await page.$$eval('#stage-reactions button', buttons => buttons.filter(b => !b.disabled).map(b => b.dataset.reaction));
+      check(`stage allowed reactions ${expression}`, JSON.stringify(enabled) === JSON.stringify(expected), enabled.join(', '));
+    }
+    await page.click('#stage-expressions [data-expression="cry"]');
+    await page.$eval('#stage', el => el.scrollIntoView({block: 'center'}));
+    await page.keyboard.press('1');
+    await page.keyboard.press('6');
+    await page.click('#stage-canvas');
+    check('forbidden shortcuts and cat click give no reaction feedback', await page.$('#stage-reactions .is-firing') === null);
+    await page.keyboard.press('4');
+    check('allowed ear shortcut still fires', await page.$('#stage-reactions [data-reaction="reactEarTwitch"].is-firing') !== null);
+
     await page.click('#stage-expressions [data-expression="shy"]');
     await page.click('#stage-reactions [data-reaction="reactNod"]');
     await sleep(300);
@@ -111,6 +132,15 @@ async function run(server) {
     const sbImages = await page.$$eval('img', (imgs) => imgs.filter((i) => i.complete && i.naturalWidth > 0).length);
     check('storybook story renders under subpath', sbIframe?.ok() === true && sbImages > 0, `${sbImages} images`);
     if (SHOTS) await page.screenshot({ path: join(SHOTS, 'storybook.png') });
+    await page.goto(`http://localhost:${PORT}/_storybook/iframe.html?id=targets-rive--machine&viewMode=story`, { waitUntil: 'networkidle0', timeout: 60_000 });
+    await page.waitForFunction(() => document.querySelector('figcaption')?.textContent.startsWith('inputs:'), {timeout:20_000});
+    for (const [expression, expected] of Object.entries(permitted)) {
+      await page.select('select', expression);
+      const enabled = await page.$$eval('#storybook-root button', buttons => buttons.filter(b => !b.disabled).map(b => b.textContent));
+      const withAlias = expected.includes('reactRingWobble') ? [...expected, 'reactTailFlick'] : expected;
+      check(`storybook allowed reactions ${expression}`, JSON.stringify(enabled.sort()) === JSON.stringify([...withAlias].sort()));
+    }
+
   } finally {
     if (browser) await browser.close();
     server.close();

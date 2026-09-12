@@ -1,3 +1,5 @@
+import { canReact } from './reaction-policy.js';
+
 // pubnyan landing page. Plain browser JS; the exported clips under ./assets/ are the only data.
 // Rive (./vendor/rive.js) and lottie-web (./vendor/lottie_svg.min.js) come from script tags.
 
@@ -169,10 +171,17 @@ function setupStage() {
   }
 
   let inputs = null;
+  let expression = 'normal';
   const input = (name) => inputs?.find((i) => i.name === name) ?? null;
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
   function setExpression(name) {
+    expression = name;
+    for (const [trigger, button] of buttons.reaction) {
+      button.disabled = !inputs || !canReact(name, trigger);
+      button.title = button.disabled ? `Unavailable while ${name}` : '';
+      if (button.disabled) button.classList.remove('is-firing');
+    }
     const target = input('expression');
     if (target) target.value = EXPRESSIONS.findIndex((e) => e.name === name);
     for (const [key, button] of buttons.expression) {
@@ -183,12 +192,15 @@ function setupStage() {
   }
 
   function fire(name) {
-    input(name)?.fire();
+    const target = input(name);
+    if (!target || !canReact(expression, name)) return false;
+    target.fire();
     const button = buttons.reaction.get(name);
-    if (!button) return;
+    if (!button) return true;
     button.classList.remove('is-firing');
     void button.offsetWidth; // restart the flash when the same button is hit twice
     button.classList.add('is-firing');
+    return true;
   }
 
   window.rive.RuntimeLoader.setWasmUrl('./vendor/rive.wasm');
@@ -248,15 +260,13 @@ function setupStage() {
     const button = event.target.closest('[data-reaction]');
     if (!button) return;
     const reaction = REACTIONS.find((r) => r.input === button.dataset.reaction);
-    fire(reaction.input);
-    playFor(reaction.duration);
+    if (fire(reaction.input)) playFor(reaction.duration);
   });
 
   // Clicking the cat is the fastest way to share a secret.
   canvas.addEventListener('click', () => {
     if (!inputs) return;
-    fire('react');
-    playFor(0.95);
+    if (fire('react')) playFor(0.95);
   });
 
   // Number keys fire reactions while the stage is on screen.
@@ -267,8 +277,7 @@ function setupStage() {
     if (!reaction) return;
     const rect = stage.getBoundingClientRect();
     if (rect.bottom < 0 || rect.top > window.innerHeight) return;
-    fire(reaction.input);
-    playFor(reaction.duration);
+    if (fire(reaction.input)) playFor(reaction.duration);
   });
 
   let resizeTimer = 0;

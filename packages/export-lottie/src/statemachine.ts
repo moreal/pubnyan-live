@@ -8,9 +8,8 @@ import type { Machine, MachineTransition } from '#ir/types.ts';
  * dotLottie only ever plays ONE animation at a time, so this is a lossy flattening of `Machine`'s
  * parallel layers into a single graph: the `idle` layer's clip becomes the visual for expression
  * states with `clip: null` (the rig's neutral pose), and every OTHER layer's transitions become
- * global (checked regardless of which state is active), since every transition in `motion/machine.ts`
- * is already authored as `from: '*'`. A `from` naming a specific state would need to be attached to
- * that state's own `transitions` instead; this derivation does not support that case.
+ * global (checked regardless of which state is active), with compound guards preserved. Named overlay-release transitions attach to the reaction
+ * state and return to the selected expression. Other named transitions remain unsupported.
  */
 
 export type DotLottieInputDef =
@@ -70,11 +69,11 @@ function guardFor(machine: Machine, when: MachineTransition['when']): DotLottieG
 }
 
 function transitionFor(machine: Machine, layerName: string, tr: MachineTransition): DotLottieTransition {
-  const guard = guardFor(machine, tr.when);
+  const guards = [tr.when, ...(tr.when.and ?? [])].map(when => guardFor(machine, when));
   const toState = stateId(layerName, tr.to);
-  if (tr.duration <= 0) return { type: 'Transition', toState, guards: [guard] };
+  if (tr.duration <= 0) return { type: 'Transition', toState, guards };
   const [x1, y1, x2, y2] = EASES.linear;
-  return { type: 'Tweened', toState, duration: tr.duration, easing: [x1, y1, x2, y2], guards: [guard] };
+  return { type: 'Tweened', toState, duration: tr.duration, easing: [x1, y1, x2, y2], guards };
 }
 
 export function exportStateMachine(machine: Machine): DotLottieStateMachine {
@@ -101,7 +100,18 @@ export function exportStateMachine(machine: Machine): DotLottieStateMachine {
     }
     for (const tr of layer.transitions) {
       if (tr.from !== '*') {
-        throw new Error(`export-lottie: state machine derivation only supports "from: '*'" transitions, got "${tr.from}" in layer "${layerName}"`);
+        // Releasing an overlay returns to the expression selected by this guard.
+        // A single-animation target has no empty layer to blend back into.
+        const expressionTransition = machine.layers.expression?.transitions.find(candidate =>
+          candidate.when.input === tr.when.input && 'equals' in candidate.when &&
+          'equals' in tr.when && candidate.when.equals === tr.when.equals);
+        if (tr.to === layer.entry && layer.states[tr.to]?.clip === null && expressionTransition) {
+          const source = states.find(state => state.name === stateId(layerName, tr.from));
+          source?.transitions.push({ ...transitionFor(machine, layerName, tr),
+            toState: stateId('expression', expressionTransition.to) });
+          continue;
+        }
+        throw new Error(`export-lottie: state machine derivation only supports "from: '*'" transitions or expression-driven overlay releases, got "${tr.from}" in layer "${layerName}"`);
       }
       globalTransitions.push(transitionFor(machine, layerName, tr));
     }

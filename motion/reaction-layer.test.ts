@@ -7,8 +7,25 @@ import { compareFrames } from '#verify/parity.ts';
 import { referenceFrame } from '#verify/reference.ts';
 import type { Machine } from '#ir/types.ts';
 
-function withoutCelebration(): Machine {
+// Deliberately ungated fixture: geometry must remain safe even for combinations
+// excluded from the public acting policy. Policy behavior has separate runtime tests.
+function geometryMachine(): Machine {
   const result = structuredClone(machine);
+  for (const name of ['reaction', 'celebration']) {
+    const layer = result.layers[name]!;
+    const seen = new Set<string>();
+    layer.transitions = layer.transitions.filter(tr => {
+      if (!('fired' in tr.when) || seen.has(tr.when.input)) return false;
+      seen.add(tr.when.input);
+      delete tr.when.and;
+      return true;
+    });
+  }
+  return result;
+}
+
+function withoutCelebration(): Machine {
+  const result = geometryMachine();
   for (const layer of Object.values(result.layers)) {
     delete layer.states.celebrate;
     layer.transitions = layer.transitions.filter(t => t.to !== 'celebrate');
@@ -19,7 +36,7 @@ function withoutCelebration(): Machine {
 test('adding the happy reaction preserves angry and crying faces during a nod', async () => {
   const rig = getRig('pubnyan');
   const before = exportRiveMachine(rig, clips, withoutCelebration());
-  const after = exportRiveMachine(rig, clips, machine);
+  const after = exportRiveMachine(rig, clips, geometryMachine());
   const renderer = await Renderer.launch();
   try {
     for (const expression of [1, 3]) {
@@ -33,7 +50,7 @@ test('adding the happy reaction preserves angry and crying faces during a nod', 
 
 test('celebration releases its full-face performance back to the continuing emotion', async () => {
   const rig = getRig('pubnyan');
-  const bytes = exportRiveMachine(rig, clips, machine);
+  const bytes = exportRiveMachine(rig, clips, geometryMachine());
   const renderer = await Renderer.launch();
   try {
     const baseline = await renderRiveStateSequence(renderer, rig, bytes, [{ expression: 3, seconds: 1 }, { seconds: 1.8 }]);
@@ -48,7 +65,7 @@ test('celebration releases its full-face performance back to the continuing emot
 
 test('triggering or interrupting a reaction preserves the pose at the transition boundary', async () => {
   const rig = getRig('pubnyan');
-  const bytes = exportRiveMachine(rig, clips, machine);
+  const bytes = exportRiveMachine(rig, clips, geometryMachine());
   const renderer = await Renderer.launch();
   try {
     for (const trigger of ['react', 'reactNod', 'reactTilt', 'reactEarTwitch', 'reactTailFlick', 'reactRingWobble', 'reactCelebrate']) {
@@ -67,7 +84,7 @@ test('reactions preserve absent expression pupils and crying pupil geometry', as
   const { PNG } = await import('pngjs');
   const rig = structuredClone(getRig('pubnyan'));
   for (const part of rig.parts) if (part.name.endsWith('.pupil')) part.fill = '#ff0000';
-  const bytes = exportRiveMachine(rig, clips, machine);
+  const bytes = exportRiveMachine(rig, clips, geometryMachine());
   const renderer = await Renderer.launch();
   try {
     for (const expression of [1, 2, 4]) {
@@ -88,7 +105,7 @@ test('reactions preserve absent expression pupils and crying pupil geometry', as
     for (const c of control) if (['wink','nod','ring-wobble','tail-flick'].includes(c.name)) {
       c.tracks = c.tracks.filter(t => !(t.part.endsWith('.pupil') && t.property === 'opacity'));
     }
-    const controlBytes = exportRiveMachine(rig, control, machine);
+    const controlBytes = exportRiveMachine(rig, control, geometryMachine());
     for (const trigger of ['react', 'reactNod', 'reactTailFlick', 'reactRingWobble']) {
       const steps = [{ expression: 3, seconds: 1 }, { trigger, seconds: 0.6 }];
       const actual = await renderRiveStateSequence(renderer, rig, bytes, steps);

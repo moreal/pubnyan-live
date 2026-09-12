@@ -22,6 +22,11 @@ Committing:
 - The Reviewer is read-only by instruction only: Flue delegates share the parent's tools, so nothing mechanically stops it from writing. The commit gate and the human review of the PR are the real backstop.
 - Commit messages get a `Co-Authored-By:` trailer for the authoring agent, but never a `Claude-Session:` (or similar session-URL) trailer — session links are ephemeral and don't belong in permanent history.
 
+## Performance tooling
+
+- CodSpeed-related skills are disabled for this repository. Do not invoke `codspeed-optimize` or `codspeed-setup-harness`, or use CodSpeed CLI/MCP tools for this project.
+- Investigate performance with local wall-clock timings, local profilers, and repeatable local benchmarks. Do not require CodSpeed authentication, uploads, or integration to optimize the check suite.
+
 ## Commands
 
 - `npm run rig:extract` / `npm run rig:inspect <file.svg>`

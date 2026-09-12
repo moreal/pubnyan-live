@@ -51,3 +51,14 @@ test('rejects incomplete or invalid transition bridges before exporting', () => 
   m.layers.base!.bridges={};
   expect(validateMachine(m,rig,clips).join('\n')).toContain('missing bridge');
 });
+
+test('validates every condition in a conjunctive guard', () => {
+  const m = machine({ rig: 'r', inputs: {react: {type:'trigger'}, mood:{type:'enum',values:['normal','cry'],default:'normal'}}, layers:{base:{entry:'idle',states:{idle:{clip:'idle',mode:'loop'}},transitions:[
+    {from:'*',to:'idle',when:{input:'react',fired:true,and:[{input:'mood',equals:'normal'}]},duration:0.1},
+  ]}} });
+  expect(validateMachine(m,rig,clips)).toEqual([]);
+  m.layers.base!.transitions[0]!.when.and = [{input:'mood',equals:'missing'}, {input:'unknown',equals:true}];
+  const errors = validateMachine(m,rig,clips).join('\n');
+  expect(errors).toContain('"missing" is not a value');
+  expect(errors).toContain('unknown input "unknown"');
+});

@@ -84,3 +84,17 @@ describe('exportStateMachine', () => {
     expect(() => exportStateMachine(bad)).toThrow(/from: '\*'/);
   });
 });
+
+test('preserves conjunctive guards and releases empty overlays through expression transitions', () => {
+  const guarded = structuredClone(machine);
+  guarded.layers.reaction!.transitions[0]!.when.and = [{input:'expression',equals:'normal'}];
+  guarded.layers.reaction!.transitions.push({from:'wink',to:'none',when:{input:'expression',equals:'angry'},duration:0.12});
+  const sm = exportStateMachine(guarded);
+  const global = sm.states.find(s => s.type === 'GlobalState')!;
+  expect(global.transitions.find(t => t.toState === 'reaction.wink')!.guards).toEqual([
+    {type:'Event',inputName:'react'},
+    {type:'String',inputName:'expression',conditionType:'Equal',compareTo:'normal'},
+  ]);
+  const wink = sm.states.find(s => s.name === 'reaction.wink')!;
+  expect(wink.transitions[0]!.toState).toBe('expression.angry');
+});

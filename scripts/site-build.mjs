@@ -20,7 +20,8 @@ await rm(OUT, { recursive: true, force: true });
 await mkdir(OUT, { recursive: true });
 
 await cp(join(ROOT, 'site'), OUT, { recursive: true });
-console.log('copied site/ -> dist/site/');
+await cp(join(ROOT, 'motion', 'reaction-policy.js'), join(OUT, 'reaction-policy.js'));
+console.log('copied site/ and reaction policy -> dist/site/');
 
 for (const target of ['svg', 'lottie', 'rive', 'video']) {
   const src = join(ROOT, 'dist', target);

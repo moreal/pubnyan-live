@@ -12,7 +12,7 @@
  *     the runtime treats that as an empty animation, allowing completed overlays to release
  *     their channels without keying a neutral pose over the expression layer),
  *   - `StateTransition`s carrying a `TransitionNumberCondition` / `TransitionBoolCondition` /
- *     `TransitionTriggerCondition` per `MachineTransition.when`.
+ *     `TransitionTriggerCondition` per guard in `MachineTransition.when` and `when.and`.
  *
  * Compatible expression paths share keyed vertices; incompatible paths crossfade.
  * Full expression states explicitly reset neutral channels. Reaction overlays key
@@ -490,7 +490,7 @@ export function exportRiveMachine(rig: Rig, clips: Clip[], machine: Machine): Bu
   };
 
   /** Writes a `StateTransition` to `toName` (an index looked up in `stateIndex`), with `duration`
-   * in seconds and, unless omitted, one condition per `when`. An omitted `when` (only used for the
+   * in seconds and, unless omitted, one condition per guard in `when`. An omitted `when` (only used for the
    * `EntryState`'s own transition) leaves the `StateTransition` with zero conditions, which
    * `StateTransition::allowed()` trivially passes — i.e. unconditional. */
   const writeTransition = (toName: string, duration: number, when: MachineTransition['when'] | undefined, stateIndex: Map<string, number>, exitAtEnd = false): void => {
@@ -504,7 +504,7 @@ export function exportRiveMachine(rig: Rig, clips: Clip[], machine: Machine): Bu
     ];
     if (exitAtEnd) properties.push([TRANSITION_EXIT_TIME, 100]);
     w.object(STATE_TRANSITION, properties);
-    if (when) writeCondition(when);
+    if (when) for (const condition of [when, ...(when.and ?? [])]) writeCondition(condition);
   };
 
   for (const [layerName, layer] of Object.entries(machine.layers)) {
@@ -564,7 +564,7 @@ export function exportRiveMachine(rig: Rig, clips: Clip[], machine: Machine): Bu
       // Release one-shot overlays; holding their last key would pin the face at
       // rest and suppress the expression's subsequent glances and breathing.
       if (state.clip && state.mode === 'once' && !clipsByName.get(state.clip)!.loop
-        && layer.states[layer.entry]!.clip === null && !namedTransitionsByFrom.has(name)) {
+        && layer.states[layer.entry]!.clip === null) {
         writeTransition(layer.entry, 0.12, undefined, stateIndex, true);
       }
     }

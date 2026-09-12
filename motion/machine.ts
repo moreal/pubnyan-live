@@ -1,4 +1,5 @@
 import { machine } from '#ir/machine.ts';
+import { reactionTransitions } from './reaction-transitions.ts';
 import { expressionBridges } from './clips/expression-bridges.ts';
 
 /**
@@ -58,12 +59,12 @@ export default machine({
         'ring-wobble': { clip: 'ring-wobble', mode: 'once' },
       },
       transitions: [
-        { from: '*', to: 'wink', when: { input: 'react', fired: true }, duration: 0.1 },
-        { from: '*', to: 'nod', when: { input: 'reactNod', fired: true }, duration: 0.1 },
-        { from: '*', to: 'tilt', when: { input: 'reactTilt', fired: true }, duration: 0.1 },
-        { from: '*', to: 'ear-twitch', when: { input: 'reactEarTwitch', fired: true }, duration: 0.1 },
-        { from: '*', to: 'ring-wobble', when: { input: 'reactRingWobble', fired: true }, duration: 0.1 },
-        { from: '*', to: 'tail-flick', when: { input: 'reactTailFlick', fired: true }, duration: 0.1 },
+        ...reactionTransitions('react', 'wink'),
+        ...reactionTransitions('reactNod', 'nod'),
+        ...reactionTransitions('reactTilt', 'tilt'),
+        ...reactionTransitions('reactEarTwitch', 'ear-twitch'),
+        ...reactionTransitions('reactRingWobble', 'ring-wobble'),
+        ...reactionTransitions('reactTailFlick', 'tail-flick'),
       ],
     },
     celebration: {
@@ -75,7 +76,7 @@ export default machine({
         celebrate: { clip: 'celebrate', mode: 'once' },
       },
       transitions: [
-        { from: '*', to: 'celebrate', when: { input: 'reactCelebrate', fired: true }, duration: 0.1 },
+        ...reactionTransitions('reactCelebrate', 'celebrate'),
       ],
     },
   },

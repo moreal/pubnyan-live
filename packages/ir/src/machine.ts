@@ -38,19 +38,21 @@ export function validateMachine(m: Machine, rig: Rig, clips: Clip[]): string[] {
       if (tr.from !== '*' && !(tr.from in layer.states)) errors.push(`${tat}: unknown state "${tr.from}"`);
       if (!(tr.to in layer.states)) errors.push(`${tat}: unknown state "${tr.to}"`);
       if (!(tr.duration >= 0)) errors.push(`${tat}: duration must be >= 0`);
-      const input = m.inputs[tr.when.input];
-      if (!input) {
-        errors.push(`${tat}: unknown input "${tr.when.input}"`);
-        continue;
-      }
-      if ('fired' in tr.when && input.type !== 'trigger') errors.push(`${tat}: "fired" needs a trigger input`);
-      if ('equals' in tr.when) {
-        if (input.type === 'trigger') errors.push(`${tat}: trigger "${tr.when.input}" cannot be compared with equals`);
-        if (input.type === 'enum' && typeof tr.when.equals !== 'string') errors.push(`${tat}: enum "${tr.when.input}" must equal a string`);
-        if (input.type === 'enum' && typeof tr.when.equals === 'string' && !input.values.includes(tr.when.equals)) {
-          errors.push(`${tat}: "${tr.when.equals}" is not a value of enum "${tr.when.input}"`);
+      for (const when of [tr.when, ...(tr.when.and ?? [])]) {
+        const input = m.inputs[when.input];
+        if (!input) {
+          errors.push(`${tat}: unknown input "${when.input}"`);
+          continue;
         }
-        if (input.type === 'bool' && typeof tr.when.equals !== 'boolean') errors.push(`${tat}: bool "${tr.when.input}" must equal a boolean`);
+        if ('fired' in when && input.type !== 'trigger') errors.push(`${tat}: "fired" needs a trigger input`);
+        if ('equals' in when) {
+          if (input.type === 'trigger') errors.push(`${tat}: trigger "${when.input}" cannot be compared with equals`);
+          if (input.type === 'enum' && typeof when.equals !== 'string') errors.push(`${tat}: enum "${when.input}" must equal a string`);
+          if (input.type === 'enum' && typeof when.equals === 'string' && !input.values.includes(when.equals)) {
+            errors.push(`${tat}: "${when.equals}" is not a value of enum "${when.input}"`);
+          }
+          if (input.type === 'bool' && typeof when.equals !== 'boolean') errors.push(`${tat}: bool "${when.input}" must equal a boolean`);
+        }
       }
     }
   }

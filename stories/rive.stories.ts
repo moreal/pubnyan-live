@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/html-vite';
+import { canReact } from '../motion/reaction-policy.js';
 import { Rive } from '@rive-app/canvas';
 import { clips, getRig, machine } from '#motion/index.ts';
 import { assetPath } from './asset-path.ts';
@@ -92,6 +93,7 @@ export const Machine: StoryObj = {
       const button = document.createElement('button');
       button.type = 'button';
       button.textContent = name;
+      button.disabled = true;
       return button;
     });
 
@@ -119,10 +121,20 @@ export const Machine: StoryObj = {
 
         const byName = new Map(inputs.map((input) => [input.name, input]));
 
+        const syncReactions = () => {
+          triggerNames.forEach((name, index) => {
+            const button = triggerButtons[index]!;
+            button.disabled = !canReact(expressionSelect.value, name);
+            button.title = button.disabled ? `Unavailable while ${expressionSelect.value}` : '';
+          });
+        };
+        syncReactions();
+
         expressionSelect.addEventListener('change', () => {
           const index = expressionInput.values.indexOf(expressionSelect.value);
           const input = byName.get('expression');
           if (input) input.value = index;
+          syncReactions();
         });
 
         loadingCheckbox.addEventListener('change', () => {
@@ -133,7 +145,7 @@ export const Machine: StoryObj = {
         for (const [name, button] of triggerNames.map((name, i) => [name, triggerButtons[i]!] as const)) {
           button.addEventListener('click', () => {
             const input = byName.get(name);
-            input?.fire();
+            if (canReact(expressionSelect.value, name)) input?.fire();
           });
         }
       },
